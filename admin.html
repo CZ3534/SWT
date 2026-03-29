@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" id="main-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soulwinning Tracker - Superadmin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
+
+    <nav class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-8 bg-indigo-600 rounded-lg flex items-center justify-center overflow-hidden">
+                <span class="font-bold text-white text-[10px] leading-none text-center">SWT</span>
+            </div>
+            <h1 class="text-lg brand-text">
+                <span class="brand-word-1">Soulwinning</span><span class="brand-word-2">Tracker</span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 active:scale-90 transition-all">
+                <svg id="sun-icon" class="w-5 h-5 hidden text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M3 12h2.25m.386-6.364l1.591 1.591M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                <svg id="moon-icon" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+            </button>
+            <button onclick="handleLogout()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:text-red-500 transition-all ml-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-6 text-center">
+        <header class="mb-10">
+            <div id="role-display" class="badge-base badge-role mb-2">SUPERADMIN</div>
+            <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-8">...</h2>
+            
+            <div class="mt-8 p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm max-w-sm mx-auto">
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-tighter">Global Ministry Reports</p>
+                <select id="churchFilter" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-2 pr-10">
+                    <option value="all">Global Total (All Churches)</option>
+                </select>
+                <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10">
+                    <option value="all">All-Time Records</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+                <div id="custom-date-container" class="hidden flex gap-2 mb-4">
+                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                </div>
+                <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all">Generate Global Report</button>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
+                <button onclick="openAdminManager()" class="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 px-6 py-3 rounded-full uppercase shadow-sm active:scale-95 transition-all">Manage Pastor Invite Codes</button>
+                <button onclick="window.location.href='leaderboard.html'" class="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 px-6 py-3 rounded-full uppercase shadow-sm active:scale-95 transition-all">View Global Leaderboard</button>
+            </div>
+        </header>
+
+        <div id="stats-container" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Global Salvations</p>
+                    <span id="totalSouls" class="text-5xl font-bold text-indigo-600">0</span>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Unique Contributors</p>
+                    <span id="totalSW" class="text-5xl font-bold">0</span>
+                </div>
+            </div>
+            <section class="bg-white dark:bg-slate-900 rounded-[2rem] border dark:border-slate-800 overflow-hidden text-left mb-20 shadow-sm">
+                <div class="px-6 py-4 border-b bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400">Latest Global Entries</div>
+                <table class="w-full text-sm"><tbody id="activityTable" class="divide-y dark:divide-slate-800"></tbody></table>
+            </section>
+        </div>
+    </main>
+
+    <div id="admin-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-50">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-8 border shadow-2xl">
+            <h3 class="text-xl font-bold mb-6 text-center dark:text-white">Pastor Invites</h3>
+            <div id="invite-list" class="space-y-1 mb-6 max-h-48 overflow-y-auto pr-2 custom-scroll text-left"></div>
+            <div class="border-t dark:border-slate-800 pt-6">
+                <input id="newInviteCode" type="text" placeholder="NEW PASTOR CODE" class="w-full p-4 mb-4 bg-slate-50 border dark:border-slate-700 rounded-2xl outline-none dark:bg-slate-800 dark:text-white font-bold text-center uppercase tracking-widest">
+                <div class="flex gap-3">
+                    <button onclick="closeAdminManager()" class="flex-1 py-4 text-slate-400 font-bold uppercase text-xs">Close</button>
+                    <button onclick="addInviteCode()" class="flex-1 py-4 bg-amber-500 text-white rounded-2xl font-bold uppercase text-xs">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc, getDocs, collection, query, where, orderBy, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        let userProfile = null; let allChurchMap = {};
+
+        const initTheme = () => {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            const html = document.getElementById('main-html');
+            if (isDark) {
+                html.classList.add('dark');
+                document.getElementById('sun-icon').classList.remove('hidden');
+                document.getElementById('moon-icon').classList.add('hidden');
+            } else {
+                html.classList.remove('dark');
+                document.getElementById('sun-icon').classList.add('hidden');
+                document.getElementById('moon-icon').classList.remove('hidden');
+            }
+        };
+        initTheme();
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.replace("index.html"); return; }
+            const snap = await getDoc(doc(db, "profiles", user.uid));
+            if (!snap.exists() || snap.data().role !== 'superadmin') { 
+                window.location.replace("index.html"); 
+                return; 
+            }
+            userProfile = snap.data();
+            document.getElementById('user-display-name').innerText = userProfile.displayName;
+            await populateAllChurches();
+        });
+
+        window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
+
+        async function populateAllChurches() {
+            const filter = document.getElementById('churchFilter');
+            const snap = await getDocs(collection(db, "churches"));
+            filter.innerHTML = '<option value="all">Global Total (All Churches)</option>';
+            snap.forEach(d => {
+                allChurchMap[d.id] = d.data().name;
+                filter.innerHTML += `<option value="${d.id}">${d.data().name}</option>`;
+            });
+        }
+
+        window.loadStats = async () => {
+            const range = document.getElementById('dateFilterRange').value;
+            const selCh = document.getElementById('churchFilter').value;
+            document.getElementById('stats-container').classList.remove('hidden');
+            document.getElementById('activityTable').innerHTML = "<tr><td class='p-6 text-center text-slate-400'>Accessing Records...</td></tr>";
+
+            try {
+                let q;
+                if (selCh === 'all') q = query(collection(db, "salvations"), orderBy("timestamp", "desc"));
+                else q = query(collection(db, "salvations"), where("churchId", "==", selCh), orderBy("timestamp", "desc"));
+
+                const snap = await getDocs(q);
+                let total = 0, userMap = {}, rows = [];
+                const now = new Date(); now.setHours(0,0,0,0);
+
+                snap.forEach(d => {
+                    const data = d.data(); const ev = new Date(data.eventDate); const evDO = new Date(data.eventDate); evDO.setHours(0,0,0,0);
+                    let inc = (range === 'all');
+                    if(range === 'today') inc = evDO.getTime() === now.getTime();
+                    else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); inc = evDO >= sW; }
+                    else if(range === 'month') inc = ev.getMonth() === now.getMonth() && ev.getFullYear() === now.getFullYear();
+                    else if(range === 'custom') { 
+                        const s = new Date(document.getElementById('startDate').value); s.setHours(0,0,0,0);
+                        const e = new Date(document.getElementById('endDate').value); e.setHours(23,59,59);
+                        inc = ev >= s && ev <= e; 
+                    }
+
+                    if(inc) {
+                        total += data.count;
+                        if(!userMap[data.userId]) userMap[data.userId] = { name: data.userEmail.split('@')[0], count: 0 };
+                        userMap[data.userId].count += data.count;
+                        
+                        const dateStr = new Date(data.eventDate).toLocaleDateString();
+                        const cName = allChurchMap[data.churchId] || "Unknown";
+                        rows.push(`<tr><td class="px-6 py-4"><p class="font-bold text-indigo-600">${data.count} Souls</p><p class="text-[10px] text-slate-400 italic">${dateStr} • ${cName} • ${data.userEmail.split('@')[0]}</p></td></tr>`);
+                    }
+                });
+                document.getElementById('totalSouls').innerText = total;
+                document.getElementById('totalSW').innerText = Object.keys(userMap).length;
+                document.getElementById('activityTable').innerHTML = rows.slice(0, 5).join('') || "<tr><td class='p-6 text-center text-slate-400'>No records found</td></tr>";
+                // Internal leaderboard sorting logic removed to save processing power
+            } catch(e) { console.error(e); }
+        };
+
+        window.openAdminManager = () => {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            onSnapshot(collection(db, "pastor_invites"), (snap) => {
+                let h = ""; snap.forEach(d => h += `<div class="church-card flex justify-between items-center"><span class="font-mono font-bold text-indigo-600">${d.id}</span><button onclick="revokeInvite('${d.id}')" class="text-[9px] font-bold text-red-500 uppercase">Revoke</button></div>`);
+                document.getElementById('invite-list').innerHTML = h || "No active codes.";
+            });
+        };
+        window.closeAdminManager = () => document.getElementById('admin-modal').classList.add('hidden');
+        window.addInviteCode = async () => { 
+            const c = document.getElementById('newInviteCode').value.toUpperCase().trim(); 
+            if(c) await setDoc(doc(db, "pastor_invites", c), { createdAt: serverTimestamp() });
+            document.getElementById('newInviteCode').value = ""; 
+        };
+        window.revokeInvite = async (id) => { if(confirm("Revoke this invite?")) await deleteDoc(doc(db, 'pastor_invites', id)); };
+
+        window.toggleDarkMode = () => { 
+            const html = document.getElementById('main-html'); 
+            const isDark = html.classList.toggle('dark'); 
+            document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
+            document.getElementById('moon-icon').classList.toggle('hidden', isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
+        };
+
+        window.handleLogout = () => signOut(auth).then(() => window.location.replace("index.html"));
+        window.toggleCustomDate = () => document.getElementById('custom-date-container').classList.toggle('hidden', document.getElementById('dateFilterRange').value !== 'custom');
+    </script>
+</body>
+</html>

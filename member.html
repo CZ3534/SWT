@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" id="main-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soulwinning Tracker - Member</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
+
+    <nav class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-8 bg-indigo-600 rounded-lg flex items-center justify-center overflow-hidden">
+                <span class="font-bold text-white text-[10px] leading-none text-center">SWT</span>
+            </div>
+            <h1 class="text-lg brand-text"><span class="brand-word-1">Soulwinning</span><span class="brand-word-2">Tracker</span></h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">
+                <svg id="sun-icon" class="w-5 h-5 hidden text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M3 12h2.25m.386-6.364l1.591 1.591M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                <svg id="moon-icon" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+            </button>
+            <button onclick="handleLogout()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:text-red-500 transition-all ml-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-6 text-center">
+        <header class="mb-10">
+            <div id="role-display" class="badge-base badge-role mb-2">MEMBER</div>
+            <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
+            <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
+            
+            <div class="mt-8 p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm max-w-sm mx-auto">
+                <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10">
+                    <option value="all">All-Time Records</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+                <div id="custom-date-container" class="hidden flex gap-2 mb-4">
+                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                </div>
+                <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all">Load Data</button>
+            </div>
+        </header>
+
+        <div id="stats-container" class="hidden">
+            <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center mb-8">
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Total Salvations</p>
+                <span id="totalSouls" class="text-5xl font-bold text-indigo-600">0</span>
+            </div>
+            <section class="bg-white dark:bg-slate-900 rounded-[2rem] border dark:border-slate-800 overflow-hidden text-left mb-20 shadow-sm">
+                <div class="px-6 py-4 border-b bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400">Your Activity (Latest 5)</div>
+                <table class="w-full text-sm"><tbody id="activityTable" class="divide-y dark:divide-slate-800"></tbody></table>
+            </section>
+        </div>
+    </main>
+
+    <button onclick="openModal()" class="fab-button">+</button>
+
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-[60]">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border text-center shadow-2xl">
+            <h3 class="text-xl font-bold mb-8 dark:text-white">Log Salvation</h3>
+            <div class="flex items-center justify-between mb-6 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-3xl">
+                <button onclick="decrement()" class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-700 font-bold text-xl hover:bg-slate-100 transition-all">-</button>
+                <input id="soulCount" type="number" value="1" readonly class="w-20 text-center text-5xl font-light bg-transparent text-indigo-600">
+                <button onclick="increment()" class="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold text-xl hover:bg-indigo-700 transition-all">+</button>
+            </div>
+            <input id="soulDateTime" type="datetime-local" class="w-full p-4 bg-slate-50 border rounded-2xl text-sm mb-4 outline-none dark:bg-slate-800 dark:text-white">
+            <input id="soulNote" type="text" placeholder="Names/Location..." class="w-full p-4 bg-slate-50 border rounded-2xl text-sm mb-8 outline-none dark:bg-slate-800 dark:text-white">
+            <div class="flex gap-3"><button onclick="closeModal()" class="flex-1 py-4 text-slate-400 font-bold">Cancel</button><button id="submit-btn" onclick="handleDataSubmit()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold">Submit</button></div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold">Record Saved. Thank you.</div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc, getDocs, collection, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        let userProfile = null;
+
+        // 🛡️ INITIALIZE THEME & ICONS ON LOAD
+        const initTheme = () => {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) {
+                document.getElementById('main-html').classList.add('dark');
+                document.getElementById('sun-icon').classList.remove('hidden');
+                document.getElementById('moon-icon').classList.add('hidden');
+            } else {
+                document.getElementById('main-html').classList.remove('dark');
+                document.getElementById('sun-icon').classList.add('hidden');
+                document.getElementById('moon-icon').classList.remove('hidden');
+            }
+        };
+        initTheme();
+
+        // 🛡️ STRICT GUARD
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.replace("index.html"); return; }
+            const snap = await getDoc(doc(db, "profiles", user.uid));
+            if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
+            userProfile = snap.data();
+            
+            if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
+            if (userProfile.role === 'pastor') { window.location.replace("pastor.html"); return; }
+            
+            document.getElementById('user-display-name').innerText = userProfile.displayName;
+            document.getElementById('role-display').innerText = userProfile.role.toUpperCase();
+            
+            const tagContainer = document.getElementById('church-list-tags');
+            let tagsHtml = "";
+            for(const code of userProfile.churchId) {
+                const d = await getDoc(doc(db, "churches", code));
+                if(d.exists()) tagsHtml += `<span class="badge-base badge-church">${d.data().name}</span>`;
+            }
+            tagContainer.innerHTML = tagsHtml;
+        });
+
+        window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
+
+        // 🌗 FIXED TOGGLE DARK MODE
+        window.toggleDarkMode = () => { 
+            const html = document.getElementById('main-html'); 
+            const isDark = html.classList.toggle('dark'); 
+            
+            // Explicitly toggle icons
+            document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
+            document.getElementById('moon-icon').classList.toggle('hidden', isDark);
+            
+            localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
+        };
+
+        window.loadStats = async () => {
+            const range = document.getElementById('dateFilterRange').value;
+            document.getElementById('stats-container').classList.remove('hidden');
+            document.getElementById('activityTable').innerHTML = "<tr><td class='p-6 text-center text-slate-400'>Loading...</td></tr>";
+
+            try {
+                const q = query(collection(db, "salvations"), where("userId", "==", auth.currentUser.uid), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                let total = 0, rows = [];
+                const now = new Date(); now.setHours(0,0,0,0);
+
+                snap.forEach(d => {
+                    const data = d.data(); const ev = new Date(data.eventDate); const evDO = new Date(data.eventDate); evDO.setHours(0,0,0,0);
+                    let inc = (range === 'all');
+                    if(range === 'today') inc = evDO.getTime() === now.getTime();
+                    else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); inc = evDO >= sW; }
+                    else if(range === 'month') inc = ev.getMonth() === now.getMonth() && ev.getFullYear() === now.getFullYear();
+                    else if(range === 'custom') { 
+                        const s = new Date(document.getElementById('startDate').value); s.setHours(0,0,0,0);
+                        const e = new Date(document.getElementById('endDate').value); e.setHours(23,59,59);
+                        inc = ev >= s && ev <= e; 
+                    }
+                    if(inc) {
+                        total += data.count;
+                        const dateStr = new Date(data.eventDate).toLocaleDateString();
+                        rows.push(`<tr><td class="px-6 py-4"><p class="font-bold text-indigo-600">${data.count} Souls</p><p class="text-[10px] text-slate-400 italic">${dateStr} • ${data.userEmail.split('@')[0]} • ${data.note || ''}</p></td></tr>`);
+                    }
+                });
+                document.getElementById('totalSouls').innerText = total;
+                document.getElementById('activityTable').innerHTML = rows.slice(0, 5).join('') || "<tr><td class='p-6 text-center text-slate-400'>No records found</td></tr>";
+            } catch(e) { console.error(e); }
+        };
+
+        window.handleDataSubmit = async () => {
+            const btn = document.getElementById('submit-btn'); btn.innerText = "Saving..."; btn.disabled = true;
+            try {
+                await addDoc(collection(db, "salvations"), {
+                    count: Number(document.getElementById('soulCount').value),
+                    note: document.getElementById('soulNote').value,
+                    eventDate: document.getElementById('soulDateTime').value,
+                    userId: auth.currentUser.uid,
+                    userEmail: auth.currentUser.email,
+                    churchId: userProfile.churchId[0],
+                    timestamp: serverTimestamp()
+                });
+                closeModal();
+                const t = document.getElementById('toast'); t.classList.remove('opacity-0', 'translate-y-10');
+                setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+            } catch(e) { alert(e.message); } finally { btn.innerText = "Submit"; btn.disabled = false; }
+        };
+
+        window.handleLogout = () => signOut(auth).then(() => window.location.replace("index.html"));
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        window.openModal = () => { document.getElementById('modal').classList.remove('hidden'); document.getElementById('soulCount').value = 1; document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); };
+        window.increment = () => document.getElementById('soulCount').value++;
+        window.decrement = () => { if(document.getElementById('soulCount').value > 1) document.getElementById('soulCount').value--; };
+        window.toggleCustomDate = () => document.getElementById('custom-date-container').classList.toggle('hidden', document.getElementById('dateFilterRange').value !== 'custom');
+    </script>
+</body>
+</html>

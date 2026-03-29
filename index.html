@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" id="main-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soulwinning Tracker - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        /* Prevents layout jump during auto-redirects */
+        [id="auth-title"] { min-height: 2.25rem; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center min-h-screen p-6 transition-colors duration-300">
+
+    <div class="w-full max-w-sm text-center">
+        <div class="flex flex-col items-center gap-6 mb-10">
+            <div class="w-16 h-14 bg-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-2xl shadow-indigo-500/20">
+                <span class="font-bold text-white text-xl leading-none">SWT</span>
+            </div>
+            <div>
+                <h1 id="auth-title" class="text-3xl brand-text justify-center">
+                    <span class="brand-word-1 dark:text-white">Soulwinning</span><span class="brand-word-2">Tracker</span>
+                </h1>
+                <p id="auth-subtitle" class="text-slate-400 font-medium text-sm mt-2 italic">Sign in to report your labor</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border dark:border-slate-800 shadow-xl text-left">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-1 block">Email</label>
+                    <input id="email" type="email" placeholder="pastor@church.com" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl outline-none text-sm dark:text-white focus:border-indigo-500 transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-1 block">Password</label>
+                    <input id="password" type="password" placeholder="••••••••" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl outline-none text-sm dark:text-white focus:border-indigo-500 transition-all">
+                    
+                    <div id="forgot-password-container" class="text-right pr-4 mt-2">
+                        <button onclick="forgotPassword()" class="text-[10px] font-bold text-slate-400 hover:text-indigo-600 uppercase transition-all">Forgot Password?</button>
+                    </div>
+                </div>
+                
+                <button id="auth-btn" onclick="handleAuth()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-2">
+                    Continue
+                </button>
+            </div>
+
+            <div class="mt-6 pt-6 border-t dark:border-slate-800 text-center">
+                <p id="switch-text" class="text-xs text-slate-400">Don't have an account?</p>
+                <button onclick="toggleMode()" id="switch-btn" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1 hover:underline">Create One</button>
+            </div>
+        </div>
+
+        <p class="mt-8 text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">Independent Baptist Ministry Tool</p>
+    </div>
+
+    <script type="module">
+        import { auth, db } from './firebase-config.js';
+        // Updated imports to include sendPasswordResetEmail
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        let isSignUp = false;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docSnap = await getDoc(doc(db, "profiles", user.uid));
+                if (!docSnap.exists()) {
+                    window.location.replace("onboarding.html");
+                } else {
+                    const role = docSnap.data().role;
+                    if (role === 'pastor') window.location.replace("pastor.html");
+                    else if (role === 'superadmin') window.location.replace("admin.html");
+                    else if (role === 'member') window.location.replace("member.html");
+                    else window.location.replace("onboarding.html");
+                }
+            }
+        });
+
+        window.toggleMode = () => {
+            isSignUp = !isSignUp;
+            const title = document.getElementById('auth-title');
+            title.innerHTML = isSignUp ? 
+                '<span class="brand-word-1 dark:text-white">Create</span><span class="brand-word-2">Account</span>' : 
+                '<span class="brand-word-1 dark:text-white">Soulwinning</span><span class="brand-word-2">Tracker</span>';
+            
+            document.getElementById('auth-subtitle').innerText = isSignUp ? "Join the harvest field" : "Sign in to report your labor";
+            document.getElementById('switch-text').innerText = isSignUp ? "Already have an account?" : "Don't have an account?";
+            document.getElementById('switch-btn').innerText = isSignUp ? "Sign In" : "Create One";
+            
+            // Toggle visibility of forgot password link
+            document.getElementById('forgot-password-container').classList.toggle('hidden', isSignUp);
+        };
+
+        window.handleAuth = async () => {
+            const e = document.getElementById('email').value, p = document.getElementById('password').value;
+            const btn = document.getElementById('auth-btn');
+            if(!e || !p) return alert("Fields required.");
+            
+            btn.innerText = "Processing..."; btn.disabled = true;
+            try {
+                if (isSignUp) await createUserWithEmailAndPassword(auth, e, p);
+                else await signInWithEmailAndPassword(auth, e, p);
+            } catch (err) {
+                alert(err.message);
+                btn.innerText = "Continue"; btn.disabled = false;
+            }
+        };
+
+        // NEW: Reset Password Function
+        window.forgotPassword = async () => {
+            const email = document.getElementById('email').value;
+            if (!email) return alert("Please enter your email address first.");
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                alert("A password reset link has been sent to your email. Please check your inbox and spam folder.");
+            } catch (err) {
+                alert(err.message);
+            }
+        };
+
+        if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); }
+    </script>
+</body>
+</html>
