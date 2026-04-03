@@ -1,129 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="main-html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My History - Soulwinning Tracker</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .stats-card { transition: transform 0.2s; border-radius: 15px; }
-        .stats-card:hover { transform: translateY(-3px); }
-        .table-responsive { border-radius: 12px; overflow: hidden; }
-        #custom-date-container.hidden { display: none; }
-        .btn-delete { color: #dc3545; cursor: pointer; transition: 0.2s; padding: 5px; }
-        .btn-delete:hover { color: #a71d2a; transform: scale(1.2); }
-        .table-sm td { vertical-align: middle; }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script>tailwind.config = { darkMode: 'class' }</script>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
-        <div class="container">
-            <span class="navbar-brand fw-bold"><i class="bi bi-clock-history me-2"></i>My History</span>
-            <button class="btn btn-sm btn-outline-light" onclick="window.history.back()">
-                <i class="bi bi-arrow-left me-1"></i>Back
+<body class="bg-slate-50 text-slate-900 dark:bg-[#0f172a] dark:text-slate-100 transition-colors duration-300">
+
+    <nav class="bg-white dark:bg-slate-900 border-b dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="flex items-center gap-2">
+            <button onclick="window.history.back()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <h1 class="text-lg font-bold ml-2">My History</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-all">
+                <svg id="sun-icon" class="w-5 h-5 hidden text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M3 12h2.25m.386-6.364l1.591 1.591M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                <svg id="moon-icon" class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
             </button>
         </div>
     </nav>
 
-    <div class="container my-4">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-3">
-                <label class="form-label small fw-bold text-muted mb-2">Select Time Period</label>
-                <select id="dateRange" class="form-select form-select-sm" onchange="toggleCustomDate()">
-                    <option value="all">All Time</option>
-                    <option value="week">This Week</option>
-                    <option value="month" selected>This Month</option>
-                    <option value="custom">Custom Range...</option>
-                </select>
+    <main class="max-w-4xl mx-auto p-6">
+        <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2rem] p-6 shadow-sm mb-6">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3">Time Period</label>
+            <select id="dateRange" class="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 px-4 py-3 rounded-2xl text-xs font-bold mb-2 dark:text-white" onchange="toggleCustomDate()">
+                <option value="all">All Time</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="custom">Custom Range...</option>
+            </select>
 
-                <div id="custom-date-container" class="hidden mt-3">
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="small text-muted">Start</label>
-                            <input type="date" id="startDate" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-6">
-                            <label class="small text-muted">End</label>
-                            <input type="date" id="endDate" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-12 mt-2">
-                            <button class="btn btn-primary btn-sm w-100 shadow-sm" onclick="applyCustomFilter()">
-                                <i class="bi bi-filter me-1"></i>Apply Filter
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div id="custom-date-container" class="hidden grid grid-cols-2 gap-3 mt-4">
+                <input type="date" id="startDate" class="bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-[10px] p-3 dark:text-white">
+                <input type="date" id="endDate" class="bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-[10px] p-3 dark:text-white">
+                <button onclick="applyCustomFilter()" class="col-span-2 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase mt-2">Apply Custom Filter</button>
             </div>
         </div>
 
-        <div class="row g-3 mb-4">
-            <div class="col-6">
-                <div class="card border-0 shadow-sm text-center p-3 stats-card">
-                    <div class="small text-muted">Total Reports</div>
-                    <div id="stat-reports" class="h4 fw-bold mb-0">0</div>
-                </div>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Reports</p>
+                <span id="stat-reports" class="text-3xl font-bold">0</span>
             </div>
-            <div class="col-6">
-                <div class="card border-0 shadow-sm text-center p-3 stats-card">
-                    <div class="small text-muted">Total Souls</div>
-                    <div id="stat-souls" class="h4 fw-bold text-primary mb-0">0</div>
-                </div>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
+                <p class="text-[10px] font-bold text-slate-400 uppercase text-indigo-600">Total Souls</p>
+                <span id="stat-souls" class="text-3xl font-bold text-indigo-600">0</span>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-5">
-            <div class="card-header bg-white py-3 border-0">
-                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-journal-check me-2 text-primary"></i>My Soulwinning Logs</h6>
+        <section class="bg-white dark:bg-slate-900 rounded-[2rem] border dark:border-slate-800 overflow-hidden shadow-sm">
+            <div class="px-6 py-4 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400 flex justify-between items-center">
+                <span>Soulwinning Logs</span>
+                <i class="bi bi-info-circle"></i>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-3 py-3 small">Date</th>
-                                <th class="text-center small">Souls</th>
-                                <th class="small">Note</th>
-                                <th class="text-end pe-3 small">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-list">
-                            </tbody>
-                    </table>
-                </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="text-[10px] text-slate-400 uppercase border-b dark:border-slate-800">
+                        <tr>
+                            <th class="px-6 py-4">Date</th>
+                            <th class="px-6 py-4 text-center">Count</th>
+                            <th class="px-6 py-4">Note</th>
+                            <th class="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list" class="divide-y dark:divide-slate-800 text-sm">
+                        </tbody>
+                </table>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script type="module">
         import { db, auth } from './firebase-config.js';
         import { collection, query, where, getDocs, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Security: Redirect if not logged in
+        // --- THEME LOGIC ---
+        const initTheme = () => {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) {
+                document.getElementById('main-html').classList.add('dark');
+                document.getElementById('sun-icon').classList.remove('hidden');
+                document.getElementById('moon-icon').classList.add('hidden');
+            }
+        };
+        initTheme();
+
+        window.toggleDarkMode = () => {
+            const html = document.getElementById('main-html');
+            const isDark = html.classList.toggle('dark');
+            document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
+            document.getElementById('moon-icon').classList.toggle('hidden', isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        };
+
+        // --- AUTH & DATA LOGIC ---
         auth.onAuthStateChanged((user) => {
-            if (!user) window.location.href = 'index.html';
+            if (!user) window.location.replace('index.html');
             else loadHistory();
         });
 
-        // Filter UI Logic
         window.toggleCustomDate = () => {
             const range = document.getElementById('dateRange').value;
             const container = document.getElementById('custom-date-container');
-            if (range === 'custom') {
-                container.classList.remove('hidden');
-            } else {
-                container.classList.add('hidden');
-                loadHistory(); 
-            }
+            if (range === 'custom') container.classList.remove('hidden');
+            else { container.classList.add('hidden'); loadHistory(); }
         };
 
         function getDateBounds() {
             const range = document.getElementById('dateRange').value;
             const now = new Date();
-            let start = new Date(0); 
+            let start = new Date(0);
             let end = new Date();
-
             if (range === 'week') {
                 const day = now.getDay();
                 start = new Date(now.setDate(now.getDate() - day));
@@ -134,23 +127,18 @@
                 const sVal = document.getElementById('startDate').value;
                 const eVal = document.getElementById('endDate').value;
                 if (sVal) start = new Date(sVal);
-                if (eVal) {
-                    end = new Date(eVal);
-                    end.setHours(23, 59, 59, 999);
-                }
+                if (eVal) { end = new Date(eVal); end.setHours(23, 59, 59, 999); }
             }
             return { start, end };
         }
 
-        // Main Data Fetch (One-Time for Quota Savings)
         async function loadHistory() {
             const user = auth.currentUser;
             if (!user) return;
-
             const tableBody = document.getElementById('history-list');
             const { start, end } = getDateBounds();
 
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading logs...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-400">Loading...</td></tr>';
 
             try {
                 const q = query(
@@ -172,44 +160,39 @@
                     soulsTotal += souls;
 
                     rowsHtml += `
-                        <tr>
-                            <td class="ps-3 py-3 small text-muted">${dateDisplay}</td>
-                            <td class="text-center fw-bold text-primary">${souls}</td>
-                            <td class="small text-secondary text-truncate" style="max-width: 120px;">${data.note || ''}</td>
-                            <td class="text-end pe-3">
-                                <i class="bi bi-trash btn-delete" title="Delete Record" onclick="deleteEntry('${snapDoc.id}')"></i>
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4 text-xs font-medium text-slate-500">${dateDisplay}</td>
+                            <td class="px-6 py-4 text-center font-bold text-indigo-600">${souls}</td>
+                            <td class="px-6 py-4 text-xs text-slate-400 italic truncate max-w-[150px]">${data.note || ''}</td>
+                            <td class="px-6 py-4 text-right">
+                                <button onclick="deleteEntry('${snapDoc.id}')" class="text-red-400 hover:text-red-600 p-2">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     `;
                 });
 
-                tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-5 text-muted small">No soulwinning records found for this period.</td></tr>';
+                tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-10 text-slate-400">No records found.</td></tr>';
                 document.getElementById('stat-reports').innerText = snapshot.size;
                 document.getElementById('stat-souls').innerText = soulsTotal;
 
             } catch (error) {
-                console.error("Error:", error);
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-danger small">Failed to load data. Please check your connection.</td></tr>';
+                console.error(error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-400">Error loading data.</td></tr>';
             }
         }
 
-        // Action Logic
         window.deleteEntry = async (id) => {
-            if (confirm("Are you sure you want to permanently delete this record? This cannot be undone.")) {
+            if (confirm("Permanently delete this record?")) {
                 try {
                     await deleteDoc(doc(db, "salvations", id));
-                    loadHistory(); // Refresh the list after deletion
-                } catch (e) {
-                    console.error(e);
-                    alert("Permission denied. You can only delete your own records.");
-                }
+                    loadHistory();
+                } catch (e) { alert("Delete failed."); }
             }
         };
 
         window.applyCustomFilter = () => loadHistory();
-
     </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
