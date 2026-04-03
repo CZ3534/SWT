@@ -30,7 +30,7 @@
 
     <main class="max-w-4xl mx-auto p-6 text-center">
         <header class="mb-10">
-            <div id="role-display" class="badge-base badge-role mb-2">PASTOR</div>
+            <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold">PASTOR</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
             <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
             
@@ -150,15 +150,25 @@
             const filter = document.getElementById('churchFilter');
             const tagContainer = document.getElementById('church-list-tags');
             let tagsHtml = ""; filter.innerHTML = '<option value="all">All Churches</option>';
+            
+            // Loop through churches to get names
             for(const code of userProfile.churchId) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) {
-                    churchNames[code] = d.data().name;
-                    tagsHtml += `<span class="badge-base badge-church">${d.data().name}</span>`;
-                    filter.innerHTML += `<option value="${code}">${d.data().name}</option>`;
+                    const cName = d.data().name;
+                    churchNames[code] = cName;
+                    tagsHtml += `<span class="badge-base badge-church">${cName}</span>`;
+                    filter.innerHTML += `<option value="${code}">${cName}</option>`;
                 }
             }
             tagContainer.innerHTML = tagsHtml;
+
+            // 🚀 CACHE CONTEXT FOR HISTORY PAGE
+            sessionStorage.setItem('userContext', JSON.stringify({
+                displayName: userProfile.displayName,
+                role: userProfile.role,
+                churches: churchNames
+            }));
         }
 
         window.toggleDarkMode = () => { 
