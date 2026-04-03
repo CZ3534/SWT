@@ -131,44 +131,73 @@
         initTheme();
 
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.replace("index.html"); return; }
-            const snap = await getDoc(doc(db, "profiles", user.uid));
-            if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
-            userProfile = snap.data();
-            
-            if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
-            if (userProfile.role !== 'pastor') { window.location.replace("member.html"); return; }
-            
-            document.getElementById('user-display-name').innerText = userProfile.displayName;
-            document.getElementById('role-display').innerText = userProfile.role.toUpperCase();
-            await refreshUI();
+            if (!user) { 
+                sessionStorage.clear();
+                window.location.replace("index.html"); 
+                return; 
+            }
+
+            const cachedData = sessionStorage.getItem('userContext');
+            if (cachedData) {
+                userProfile = JSON.parse(cachedData);
+                churchNames = userProfile.churchNames || {};
+                
+                // Security check for role
+                if (userProfile.role !== 'pastor') {
+                    window.location.replace("member.html");
+                    return;
+                }
+                
+                renderProfileUI(userProfile);
+            } else {
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
+                userProfile = snap.data();
+                
+                if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
+                if (userProfile.role !== 'pastor') { window.location.replace("member.html"); return; }
+                
+                await refreshUI();
+            }
         });
 
         window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
 
         async function refreshUI() {
             const filter = document.getElementById('churchFilter');
-            const tagContainer = document.getElementById('church-list-tags');
-            let tagsHtml = ""; filter.innerHTML = '<option value="all">All Churches</option>';
+            filter.innerHTML = '<option value="all">All Churches</option>';
             
-            // Loop through churches to get names
             for(const code of userProfile.churchId) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) {
-                    const cName = d.data().name;
-                    churchNames[code] = cName;
-                    tagsHtml += `<span class="badge-base badge-church">${cName}</span>`;
-                    filter.innerHTML += `<option value="${code}">${cName}</option>`;
+                    churchNames[code] = d.data().name;
                 }
             }
-            tagContainer.innerHTML = tagsHtml;
 
-            // 🚀 CACHE CONTEXT FOR HISTORY PAGE
+            // Save to Session Storage
             sessionStorage.setItem('userContext', JSON.stringify({
-                displayName: userProfile.displayName,
-                role: userProfile.role,
-                churches: churchNames
+                ...userProfile,
+                churchNames: churchNames
             }));
+
+            renderProfileUI(userProfile);
+        }
+
+        function renderProfileUI(profile) {
+            document.getElementById('user-display-name').innerText = profile.displayName;
+            document.getElementById('role-display').innerText = profile.role.toUpperCase();
+            
+            const filter = document.getElementById('churchFilter');
+            const tagContainer = document.getElementById('church-list-tags');
+            let tagsHtml = "";
+            
+            filter.innerHTML = '<option value="all">All Churches</option>';
+            Object.keys(churchNames).forEach(code => {
+                const name = churchNames[code];
+                tagsHtml += `<span class="badge-base badge-church">${name}</span>`;
+                filter.innerHTML += `<option value="${code}">${name}</option>`;
+            });
+            tagContainer.innerHTML = tagsHtml;
         }
 
         window.toggleDarkMode = () => { 
@@ -195,7 +224,9 @@
                 await updateDoc(doc(db, "profiles", auth.currentUser.uid), { churchId: arrayUnion(c) });
                 userProfile.churchId.push(c);
                 document.getElementById('newChurchName').value = "";
-                await refreshUI(); openChurchManager();
+                sessionStorage.removeItem('userContext'); // Clear cache to force refresh
+                await refreshUI(); 
+                openChurchManager();
             } catch(e) { alert(e.message); }
         };
 
@@ -257,7 +288,10 @@
             } catch(e) { alert(e.message); } finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
-        window.handleLogout = () => signOut(auth).then(() => window.location.replace("index.html"));
+        window.handleLogout = () => signOut(auth).then(() => {
+            sessionStorage.clear();
+            window.location.replace("index.html");
+        });
         window.closeChurchManager = () => document.getElementById('church-modal').classList.add('hidden');
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
         window.openModal = () => { document.getElementById('modal').classList.remove('hidden'); document.getElementById('soulCount').value = 1; document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); };
