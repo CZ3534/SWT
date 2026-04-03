@@ -35,7 +35,7 @@
             <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
             
             <div class="mt-8 p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm max-w-sm mx-auto">
-                <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10">
+                <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10 dark:text-white">
                     <option value="all">All-Time Records</option>
                     <option value="today">Today</option>
                     <option value="week">This Week</option>
@@ -43,16 +43,22 @@
                     <option value="custom">Custom Range</option>
                 </select>
                 <div id="custom-date-container" class="hidden flex gap-2 mb-4">
-                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
-                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
+                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
                 </div>
-                <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all">Load Data</button>
+                <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Load Data</button>
+            </div>
+
+            <div class="flex justify-center gap-3 mt-6">
+                <button onclick="window.location.href='history.html'" class="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-10 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">
+                    My History
+                </button>
             </div>
         </header>
 
         <div id="stats-container" class="hidden">
             <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center mb-8">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Total Salvations</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Salvations</p>
                 <span id="totalSouls" class="text-5xl font-bold text-indigo-600">0</span>
             </div>
             <section class="bg-white dark:bg-slate-900 rounded-[2rem] border dark:border-slate-800 overflow-hidden text-left mb-20 shadow-sm">
@@ -87,7 +93,6 @@
 
         let userProfile = null;
 
-        // 🛡️ INITIALIZE THEME & ICONS ON LOAD
         const initTheme = () => {
             const isDark = localStorage.getItem('theme') === 'dark';
             if (isDark) {
@@ -102,7 +107,6 @@
         };
         initTheme();
 
-        // 🛡️ STRICT GUARD
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.replace("index.html"); return; }
             const snap = await getDoc(doc(db, "profiles", user.uid));
@@ -126,15 +130,11 @@
 
         window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
 
-        // 🌗 FIXED TOGGLE DARK MODE
         window.toggleDarkMode = () => { 
             const html = document.getElementById('main-html'); 
             const isDark = html.classList.toggle('dark'); 
-            
-            // Explicitly toggle icons
             document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
             document.getElementById('moon-icon').classList.toggle('hidden', isDark);
-            
             localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
         };
 
