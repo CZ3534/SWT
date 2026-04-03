@@ -91,8 +91,8 @@
             const isDark = localStorage.getItem('theme') === 'dark';
             if (isDark) {
                 document.getElementById('main-html').classList.add('dark');
-                document.getElementById('sun-icon').classList.remove('hidden');
-                document.getElementById('moon-icon').classList.add('hidden');
+                document.getElementById('sun-icon')?.classList.remove('hidden');
+                document.getElementById('moon-icon')?.classList.add('hidden');
             }
         };
         initTheme();
@@ -100,8 +100,8 @@
         window.toggleDarkMode = () => {
             const html = document.getElementById('main-html');
             const isDark = html.classList.toggle('dark');
-            document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
-            document.getElementById('moon-icon').classList.toggle('hidden', isDark);
+            document.getElementById('sun-icon')?.classList.toggle('hidden', !isDark);
+            document.getElementById('moon-icon')?.classList.toggle('hidden', isDark);
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         };
 
@@ -114,36 +114,52 @@
 
             const cachedData = sessionStorage.getItem('userContext');
             if (cachedData) {
-                const context = JSON.parse(cachedData);
-                renderHeader(context.displayName, context.role, context.churches);
-            } else {
-                const snap = await getDoc(doc(db, "profiles", user.uid));
-                if (snap.exists()) {
-                    const profile = snap.data();
-                    const churches = {};
-                    for(const code of profile.churchId) {
-                        const d = await getDoc(doc(db, "churches", code));
-                        if(d.exists()) churches[code] = d.data().name;
-                    }
-                    renderHeader(profile.displayName, profile.role, churches);
-                    sessionStorage.setItem('userContext', JSON.stringify({
-                        displayName: profile.displayName,
-                        role: profile.role,
-                        churches: churches
-                    }));
+                try {
+                    const context = JSON.parse(cachedData);
+                    // Robust check for church names in cache
+                    const chData = context.churchNames || context.churches || {};
+                    renderHeader(context.displayName, context.role, chData);
+                } catch (e) {
+                    fetchFreshProfile(user.uid);
                 }
+            } else {
+                fetchFreshProfile(user.uid);
             }
             loadHistory();
         });
 
+        async function fetchFreshProfile(uid) {
+            const snap = await getDoc(doc(db, "profiles", uid));
+            if (snap.exists()) {
+                const profile = snap.data();
+                const churches = {};
+                for(const code of (profile.churchId || [])) {
+                    const d = await getDoc(doc(db, "churches", code));
+                    if(d.exists()) churches[code] = d.data().name;
+                }
+                renderHeader(profile.displayName, profile.role, churches);
+                sessionStorage.setItem('userContext', JSON.stringify({ ...profile, churchNames: churches }));
+            }
+        }
+
         function renderHeader(name, role, churches) {
-            document.getElementById('user-display-name').innerText = name;
-            document.getElementById('role-display').innerText = role;
+            document.getElementById('user-display-name').innerText = name || "...";
+            document.getElementById('role-display').innerText = (role || "Member").toUpperCase();
+            
+            const tagContainer = document.getElementById('church-list-tags');
             let tagsHtml = "";
-            Object.values(churches).forEach(churchName => {
-                tagsHtml += `<span class="badge-base badge-church">${churchName}</span>`;
-            });
-            document.getElementById('church-list-tags').innerHTML = tagsHtml;
+            
+            // Safeguard against undefined/null church object
+            const churchEntries = churches ? Object.values(churches) : [];
+            
+            if (churchEntries.length > 0) {
+                churchEntries.forEach(churchName => {
+                    tagsHtml += `<span class="badge-base badge-church">${churchName}</span>`;
+                });
+            } else {
+                tagsHtml = `<span class="text-slate-500 text-[10px]">No Church Assigned</span>`;
+            }
+            tagContainer.innerHTML = tagsHtml;
         }
 
         // --- DATA LOGIC ---
@@ -162,6 +178,7 @@
 
             if (range === 'all') {
                 start = new Date(0);
+                end = new Date();
             } else if (range === 'week') {
                 const day = now.getDay();
                 start = new Date(now.setDate(now.getDate() - day));
@@ -174,6 +191,7 @@
             } else if (range === 'custom') {
                 const sVal = document.getElementById('startDate').value;
                 const eVal = document.getElementById('endDate').value;
+                // Force local time interpretation with T00:00:00
                 if (sVal) start = new Date(sVal + 'T00:00:00');
                 if (eVal) end = new Date(eVal + 'T23:59:59');
             }
@@ -213,7 +231,7 @@
                             <td class="px-6 py-4 text-center font-bold text-indigo-600">${souls}</td>
                             <td class="px-6 py-4 text-xs text-slate-400 italic truncate max-w-[150px]">${data.note || ''}</td>
                             <td class="px-6 py-4 text-right">
-                                <button onclick="deleteEntry('${snapDoc.id}')" class="text-slate-300 hover:text-red-500 p-2 transition-colors">
+                                <button onclick="deleteEntry('${snapDoc.id}')" class="text-slate-400 hover:text-red-500 p-2 transition-colors">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
