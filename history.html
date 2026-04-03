@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My History - Soulwinning Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .stats-card { transition: transform 0.2s; border-radius: 15px; }
+        .stats-card:hover { transform: translateY(-3px); }
+        .table-responsive { border-radius: 12px; overflow: hidden; }
+        #custom-date-container.hidden { display: none; }
+        .btn-delete { color: #dc3545; cursor: pointer; transition: 0.2s; padding: 5px; }
+        .btn-delete:hover { color: #a71d2a; transform: scale(1.2); }
+        .table-sm td { vertical-align: middle; }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+        <div class="container">
+            <span class="navbar-brand fw-bold"><i class="bi bi-clock-history me-2"></i>My History</span>
+            <button class="btn btn-sm btn-outline-light" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </button>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-3">
+                <label class="form-label small fw-bold text-muted mb-2">Select Time Period</label>
+                <select id="dateRange" class="form-select form-select-sm" onchange="toggleCustomDate()">
+                    <option value="all">All Time</option>
+                    <option value="week">This Week</option>
+                    <option value="month" selected>This Month</option>
+                    <option value="custom">Custom Range...</option>
+                </select>
+
+                <div id="custom-date-container" class="hidden mt-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="small text-muted">Start</label>
+                            <input type="date" id="startDate" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">End</label>
+                            <input type="date" id="endDate" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button class="btn btn-primary btn-sm w-100 shadow-sm" onclick="applyCustomFilter()">
+                                <i class="bi bi-filter me-1"></i>Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-6">
+                <div class="card border-0 shadow-sm text-center p-3 stats-card">
+                    <div class="small text-muted">Total Reports</div>
+                    <div id="stat-reports" class="h4 fw-bold mb-0">0</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-0 shadow-sm text-center p-3 stats-card">
+                    <div class="small text-muted">Total Souls</div>
+                    <div id="stat-souls" class="h4 fw-bold text-primary mb-0">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-5">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-journal-check me-2 text-primary"></i>My Soulwinning Logs</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3 py-3 small">Date</th>
+                                <th class="text-center small">Souls</th>
+                                <th class="small">Note</th>
+                                <th class="text-end pe-3 small">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, auth } from './firebase-config.js';
+        import { collection, query, where, getDocs, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Security: Redirect if not logged in
+        auth.onAuthStateChanged((user) => {
+            if (!user) window.location.href = 'index.html';
+            else loadHistory();
+        });
+
+        // Filter UI Logic
+        window.toggleCustomDate = () => {
+            const range = document.getElementById('dateRange').value;
+            const container = document.getElementById('custom-date-container');
+            if (range === 'custom') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+                loadHistory(); 
+            }
+        };
+
+        function getDateBounds() {
+            const range = document.getElementById('dateRange').value;
+            const now = new Date();
+            let start = new Date(0); 
+            let end = new Date();
+
+            if (range === 'week') {
+                const day = now.getDay();
+                start = new Date(now.setDate(now.getDate() - day));
+                start.setHours(0, 0, 0, 0);
+            } else if (range === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (range === 'custom') {
+                const sVal = document.getElementById('startDate').value;
+                const eVal = document.getElementById('endDate').value;
+                if (sVal) start = new Date(sVal);
+                if (eVal) {
+                    end = new Date(eVal);
+                    end.setHours(23, 59, 59, 999);
+                }
+            }
+            return { start, end };
+        }
+
+        // Main Data Fetch (One-Time for Quota Savings)
+        async function loadHistory() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const tableBody = document.getElementById('history-list');
+            const { start, end } = getDateBounds();
+
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading logs...</td></tr>';
+
+            try {
+                const q = query(
+                    collection(db, "salvations"),
+                    where("userId", "==", user.uid),
+                    where("timestamp", ">=", start),
+                    where("timestamp", "<=", end),
+                    orderBy("timestamp", "desc")
+                );
+
+                const snapshot = await getDocs(q);
+                let rowsHtml = '';
+                let soulsTotal = 0;
+
+                snapshot.forEach((snapDoc) => {
+                    const data = snapDoc.data();
+                    const souls = parseInt(data.count) || 0;
+                    const dateDisplay = data.eventDate ? data.eventDate.split('T')[0] : '---';
+                    soulsTotal += souls;
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="ps-3 py-3 small text-muted">${dateDisplay}</td>
+                            <td class="text-center fw-bold text-primary">${souls}</td>
+                            <td class="small text-secondary text-truncate" style="max-width: 120px;">${data.note || ''}</td>
+                            <td class="text-end pe-3">
+                                <i class="bi bi-trash btn-delete" title="Delete Record" onclick="deleteEntry('${snapDoc.id}')"></i>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-5 text-muted small">No soulwinning records found for this period.</td></tr>';
+                document.getElementById('stat-reports').innerText = snapshot.size;
+                document.getElementById('stat-souls').innerText = soulsTotal;
+
+            } catch (error) {
+                console.error("Error:", error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-danger small">Failed to load data. Please check your connection.</td></tr>';
+            }
+        }
+
+        // Action Logic
+        window.deleteEntry = async (id) => {
+            if (confirm("Are you sure you want to permanently delete this record? This cannot be undone.")) {
+                try {
+                    await deleteDoc(doc(db, "salvations", id));
+                    loadHistory(); // Refresh the list after deletion
+                } catch (e) {
+                    console.error(e);
+                    alert("Permission denied. You can only delete your own records.");
+                }
+            }
+        };
+
+        window.applyCustomFilter = () => loadHistory();
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
