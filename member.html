@@ -121,11 +121,24 @@
             
             const tagContainer = document.getElementById('church-list-tags');
             let tagsHtml = "";
+            let churchNames = {}; // Store names for session cache
+
             for(const code of userProfile.churchId) {
                 const d = await getDoc(doc(db, "churches", code));
-                if(d.exists()) tagsHtml += `<span class="badge-base badge-church">${d.data().name}</span>`;
+                if(d.exists()) {
+                    const cName = d.data().name;
+                    churchNames[code] = cName;
+                    tagsHtml += `<span class="badge-base badge-church">${cName}</span>`;
+                }
             }
             tagContainer.innerHTML = tagsHtml;
+
+            // 🚀 CACHE CONTEXT FOR HISTORY PAGE
+            sessionStorage.setItem('userContext', JSON.stringify({
+                displayName: userProfile.displayName,
+                role: userProfile.role,
+                churches: churchNames
+            }));
         });
 
         window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
