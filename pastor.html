@@ -52,9 +52,12 @@
                 <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Load Data</button>
             </div>
             
-            <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-                <button id="manage-churches-btn" onclick="openChurchManager()" class="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 px-6 py-3 rounded-full uppercase active:scale-95 transition-all">Manage Churches & Codes</button>
-                <button onclick="window.location.href='leaderboard.html'" class="text-[10px] font-bold bg-indigo-600 text-white px-6 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">View Leaderboard</button>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3 mt-6">
+                <button id="manage-churches-btn" onclick="openChurchManager()" class="w-full sm:w-auto text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 px-6 py-3 rounded-full uppercase active:scale-95 transition-all">Manage Churches & Codes</button>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="window.location.href='history.html'" class="flex-1 sm:flex-initial text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-6 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">My History</button>
+                    <button onclick="window.location.href='leaderboard.html'" class="flex-1 sm:flex-initial text-[10px] font-bold bg-indigo-600 text-white px-6 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">Leaderboard</button>
+                </div>
             </div>
         </header>
 
