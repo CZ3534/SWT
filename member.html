@@ -108,38 +108,66 @@
         initTheme();
 
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.replace("index.html"); return; }
-            const snap = await getDoc(doc(db, "profiles", user.uid));
-            if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
-            userProfile = snap.data();
-            
-            if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
-            if (userProfile.role === 'pastor') { window.location.replace("pastor.html"); return; }
-            
-            document.getElementById('user-display-name').innerText = userProfile.displayName;
-            document.getElementById('role-display').innerText = userProfile.role.toUpperCase();
+            if (!user) { 
+                sessionStorage.clear();
+                window.location.replace("index.html"); 
+                return; 
+            }
+
+            // 🛡️ Performance Optimization: Check Session Cache First
+            const cachedData = sessionStorage.getItem('userContext');
+            if (cachedData) {
+                userProfile = JSON.parse(cachedData);
+                
+                // Security check for role mismatch
+                if (userProfile.role !== 'member') {
+                    window.location.replace("pastor.html");
+                    return;
+                }
+                
+                renderProfileUI(userProfile);
+            } else {
+                // Fallback: Fetch from Firebase if cache is missing
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
+                userProfile = snap.data();
+                
+                if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
+                if (userProfile.role === 'pastor') { window.location.replace("pastor.html"); return; }
+                
+                let churchNames = {};
+                for(const code of userProfile.churchId) {
+                    const d = await getDoc(doc(db, "churches", code));
+                    if(d.exists()) {
+                        churchNames[code] = d.data().name;
+                    }
+                }
+
+                // Update cache for the next load or the history page
+                sessionStorage.setItem('userContext', JSON.stringify({
+                    ...userProfile,
+                    churchNames: churchNames
+                }));
+
+                renderProfileUI(userProfile, churchNames);
+            }
+        });
+
+        function renderProfileUI(profile, fallbackNames = null) {
+            document.getElementById('user-display-name').innerText = profile.displayName;
+            document.getElementById('role-display').innerText = profile.role.toUpperCase();
             
             const tagContainer = document.getElementById('church-list-tags');
+            const namesMap = fallbackNames || profile.churchNames;
+            
             let tagsHtml = "";
-            let churchNames = {}; // Store names for session cache
-
-            for(const code of userProfile.churchId) {
-                const d = await getDoc(doc(db, "churches", code));
-                if(d.exists()) {
-                    const cName = d.data().name;
-                    churchNames[code] = cName;
-                    tagsHtml += `<span class="badge-base badge-church">${cName}</span>`;
-                }
+            if (namesMap) {
+                Object.values(namesMap).forEach(name => {
+                    tagsHtml += `<span class="badge-base badge-church">${name}</span>`;
+                });
             }
             tagContainer.innerHTML = tagsHtml;
-
-            // 🚀 CACHE CONTEXT FOR HISTORY PAGE
-            sessionStorage.setItem('userContext', JSON.stringify({
-                displayName: userProfile.displayName,
-                role: userProfile.role,
-                churches: churchNames
-            }));
-        });
+        }
 
         window.addEventListener('pageshow', (event) => { if (event.persisted) { window.location.reload(); } });
 
@@ -202,7 +230,10 @@
             } catch(e) { alert(e.message); } finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
-        window.handleLogout = () => signOut(auth).then(() => window.location.replace("index.html"));
+        window.handleLogout = () => signOut(auth).then(() => {
+            sessionStorage.clear();
+            window.location.replace("index.html");
+        });
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
         window.openModal = () => { document.getElementById('modal').classList.remove('hidden'); document.getElementById('soulCount').value = 1; document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); };
         window.increment = () => document.getElementById('soulCount').value++;
