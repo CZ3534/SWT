@@ -125,7 +125,8 @@
                     return;
                 }
                 
-                renderProfileUI(userProfile);
+                // Pass churchNames from the cache to the UI renderer
+                renderProfileUI(userProfile, userProfile.churchNames);
             } else {
                 // Fallback: Fetch from Firebase if cache is missing
                 const snap = await getDoc(doc(db, "profiles", user.uid));
@@ -153,18 +154,21 @@
             }
         });
 
-        function renderProfileUI(profile, fallbackNames = null) {
+        // Combined helper function to ensure tags show up in all scenarios
+        function renderProfileUI(profile, namesMap = null) {
             document.getElementById('user-display-name').innerText = profile.displayName;
             document.getElementById('role-display').innerText = profile.role.toUpperCase();
             
             const tagContainer = document.getElementById('church-list-tags');
-            const namesMap = fallbackNames || profile.churchNames;
+            const dataToUse = namesMap || profile.churchNames;
             
             let tagsHtml = "";
-            if (namesMap) {
-                Object.values(namesMap).forEach(name => {
+            if (dataToUse && Object.keys(dataToUse).length > 0) {
+                Object.values(dataToUse).forEach(name => {
                     tagsHtml += `<span class="badge-base badge-church">${name}</span>`;
                 });
+            } else {
+                tagsHtml = `<span class="text-slate-500 text-[10px]">No Church Assigned</span>`;
             }
             tagContainer.innerHTML = tagsHtml;
         }
