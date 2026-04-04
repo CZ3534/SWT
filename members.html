@@ -71,6 +71,8 @@
         </div>
     </main>
 
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
+
     <script type="module">
         import { db, auth } from './firebase-config.js';
         import { collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -80,14 +82,21 @@
         let userProfile = null;
 
         const initTheme = () => {
-            const isDark = localStorage.getItem('theme') === 'dark';
-            if (isDark) {
+            if (localStorage.getItem('theme') === 'dark') {
                 document.getElementById('main-html').classList.add('dark');
                 document.getElementById('sun-icon').classList.remove('hidden');
                 document.getElementById('moon-icon').classList.add('hidden');
             }
         };
         initTheme();
+
+        // New Global Toast Function
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        };
 
         window.toggleDarkMode = () => { 
             const html = document.getElementById('main-html'); 
@@ -119,7 +128,7 @@
 
         window.fetchMembers = async () => {
             const churchId = document.getElementById('churchSelect').value;
-            if(!churchId) return;
+            if(!churchId) return showToast("Select a church first");
 
             const listBody = document.getElementById('member-list');
             document.getElementById('initial-message').classList.add('hidden');
@@ -138,7 +147,7 @@
                 });
 
                 renderList(allMembers);
-            } catch (e) { console.error(e); }
+            } catch (e) { showToast("Error loading members"); }
         };
 
         function renderList(members) {
@@ -155,7 +164,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <button onclick="toggleStatus('${m.id}', '${m.status}')" class="text-[10px] font-bold uppercase tracking-widest ${m.status === 'active' ? 'text-rose-500' : 'text-indigo-600'} hover:opacity-70 transition-opacity">
+                        <button onclick="toggleStatus('${m.id}', '${m.status}', '${m.displayName}')" class="text-[10px] font-bold uppercase tracking-widest ${m.status === 'active' ? 'text-rose-500' : 'text-indigo-600'} hover:opacity-70 transition-opacity">
                             ${m.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
                     </td>
@@ -163,14 +172,15 @@
             `).join('') || '<tr><td colspan="3" class="text-center py-10 text-slate-400">No members found.</td></tr>';
         }
 
-        window.toggleStatus = async (uid, currentStatus) => {
+        window.toggleStatus = async (uid, currentStatus, name) => {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-            const action = newStatus === 'inactive' ? 'DEACTIVATE' : 'ACTIVATE';
-            if (confirm(`Are you sure you want to ${action} this member? They will be logged out immediately.`)) {
+            // We keep confirm() here because deactivating is a high-impact destructive action
+            if (confirm(`Change access for ${name} to ${newStatus.toUpperCase()}?`)) {
                 try {
                     await updateDoc(doc(db, "profiles", uid), { status: newStatus });
+                    showToast(`${name} is now ${newStatus}`);
                     fetchMembers(); 
-                } catch (e) { alert("Action failed. Check permissions."); }
+                } catch (e) { showToast("Action failed"); }
             }
         };
 
