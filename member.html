@@ -89,7 +89,7 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold">Record Saved. Thank you.</div>
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
 
     <script type="module">
         import { auth, db } from './firebase-config.js';
@@ -111,6 +111,14 @@
             }
         };
         initTheme();
+
+        // New Global Toast Function
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        };
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { 
@@ -202,11 +210,10 @@
 
                 const q = query(collection(db, "salvations"), ...constraints);
                 
-                // Server-side Aggregation
                 const soulSnap = await getAggregateFromServer(q, { total: sum('count') });
                 document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
 
-            } catch(e) { console.error(e); }
+            } catch(e) { showToast("Error loading stats."); }
         };
 
         window.handleDataSubmit = async () => {
@@ -222,10 +229,9 @@
                     timestamp: serverTimestamp()
                 });
                 closeModal();
-                const t = document.getElementById('toast'); t.classList.remove('opacity-0', 'translate-y-10');
-                setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+                showToast("Record Saved. Thank you.");
                 loadStats();
-            } catch(e) { alert(e.message); } finally { btn.innerText = "Submit"; btn.disabled = false; }
+            } catch(e) { showToast("Error saving record."); } finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
         window.handleLogout = () => signOut(auth).then(() => {
