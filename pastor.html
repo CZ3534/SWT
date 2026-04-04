@@ -123,7 +123,7 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
 
     <script type="module">
         import { auth, db } from './firebase-config.js';
@@ -141,7 +141,6 @@
         };
         initTheme();
 
-        // New Global Toast Function
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
             t.innerText = msg;
@@ -150,17 +149,43 @@
         };
 
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.replace("index.html"); return; }
-            const snap = await getDoc(doc(db, "profiles", user.uid));
-            if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
-            userProfile = snap.data();
-            if (userProfile.role !== 'pastor') { window.location.replace("member.html"); return; }
-            await refreshUI();
+            if (!user) { 
+                sessionStorage.clear();
+                window.location.replace("index.html"); 
+                return; 
+            }
+
+            try {
+                // BOUNCER: Fresh check on every reload/focus
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
+                
+                userProfile = snap.data();
+
+                // SESSION PERSISTENCE (Bouncer)
+                if (userProfile.status === 'inactive') {
+                    await signOut(auth);
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
+                    return;
+                }
+
+                if (userProfile.role !== 'pastor') {
+                    window.location.replace("member.html");
+                    return;
+                }
+
+                await refreshUI();
+            } catch (e) {
+                console.error(e);
+                window.location.replace("index.html");
+            }
         });
 
         async function refreshUI() {
             const filter = document.getElementById('churchFilter');
             filter.innerHTML = '<option value="all">All Churches</option>';
+            churchNames = {};
             for(const code of userProfile.churchId) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) { churchNames[code] = d.data().name; }
@@ -228,7 +253,7 @@
 
                 const now = new Date(); let startLimit = null;
                 if(range === 'today') startLimit = new Date(now.setHours(0,0,0,0)).toISOString();
-                else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); }
+                else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay()); startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); }
                 else if(range === 'month') startLimit = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
                 else if(range === 'custom') startLimit = new Date(document.getElementById('startDate').value).toISOString();
 
@@ -243,7 +268,7 @@
                 let uniqueUsers = new Set();
                 memberSnap.forEach(d => uniqueUsers.add(d.data().userId));
                 document.getElementById('totalSW').innerText = uniqueUsers.size;
-            } catch(e) { showToast("Error: Check Firestore Indexing Link in Console"); }
+            } catch(e) { showToast("Error: Index required or connection lost."); }
         };
 
         window.handleDataSubmit = async () => {
