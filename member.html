@@ -51,10 +51,9 @@
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest text-center">Recent Activity Report</label>
                 <div class="p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm">
                     <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10 dark:text-white">
-                        <option value="all">All-Time Records</option>
                         <option value="today">Today</option>
                         <option value="week">This Week</option>
-                        <option value="month">This Month</option>
+                        <option value="month" selected>This Month</option>
                         <option value="custom">Custom Range</option>
                     </select>
                     <div id="custom-date-container" class="hidden flex gap-2 mb-4">
@@ -71,10 +70,6 @@
                 <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Salvations</p>
                 <span id="totalSouls" class="text-5xl font-bold text-indigo-600">0</span>
             </div>
-            <section class="bg-white dark:bg-slate-900 rounded-[2rem] border dark:border-slate-800 overflow-hidden text-left mb-20 shadow-sm">
-                <div class="px-6 py-4 border-b bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400">Your Activity (Latest 5)</div>
-                <table class="w-full text-sm"><tbody id="activityTable" class="divide-y dark:divide-slate-800"></tbody></table>
-            </section>
         </div>
     </main>
 
@@ -186,17 +181,17 @@
         window.loadStats = async () => {
             const range = document.getElementById('dateFilterRange').value;
             document.getElementById('stats-container').classList.remove('hidden');
-            document.getElementById('activityTable').innerHTML = "<tr><td class='p-6 text-center text-slate-400'>Loading...</td></tr>";
+            document.getElementById('totalSouls').innerText = "...";
 
             try {
-                const q = query(collection(db, "salvations"), where("userId", "==", auth.currentUser.uid), orderBy("timestamp", "desc"));
+                const q = query(collection(db, "salvations"), where("userId", "==", auth.currentUser.uid));
                 const snap = await getDocs(q);
-                let total = 0, rows = [];
+                let total = 0;
                 const now = new Date(); now.setHours(0,0,0,0);
 
                 snap.forEach(d => {
                     const data = d.data(); const ev = new Date(data.eventDate); const evDO = new Date(data.eventDate); evDO.setHours(0,0,0,0);
-                    let inc = (range === 'all');
+                    let inc = false;
                     if(range === 'today') inc = evDO.getTime() === now.getTime();
                     else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); inc = evDO >= sW; }
                     else if(range === 'month') inc = ev.getMonth() === now.getMonth() && ev.getFullYear() === now.getFullYear();
@@ -207,12 +202,9 @@
                     }
                     if(inc) {
                         total += data.count;
-                        const dateStr = new Date(data.eventDate).toLocaleDateString();
-                        rows.push(`<tr><td class="px-6 py-4"><p class="font-bold text-indigo-600">${data.count} Souls</p><p class="text-[10px] text-slate-400 italic">${dateStr} • ${data.userEmail.split('@')[0]} • ${data.note || ''}</p></td></tr>`);
                     }
                 });
                 document.getElementById('totalSouls').innerText = total;
-                document.getElementById('activityTable').innerHTML = rows.slice(0, 5).join('') || "<tr><td class='p-6 text-center text-slate-400'>No records found</td></tr>";
             } catch(e) { console.error(e); }
         };
 
@@ -231,6 +223,7 @@
                 closeModal();
                 const t = document.getElementById('toast'); t.classList.remove('opacity-0', 'translate-y-10');
                 setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+                loadStats();
             } catch(e) { alert(e.message); } finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
 
