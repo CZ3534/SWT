@@ -28,7 +28,7 @@
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-6 text-center">
+    <main class="max-w-4xl mx-auto p-6 pb-32 text-center">
         <header class="mb-10">
             <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold">MEMBER</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
@@ -73,7 +73,7 @@
         </div>
     </main>
 
-    <button onclick="openModal()" class="fab-button">+</button>
+    <button onclick="openModal()" class="fab-button bg-indigo-600/90 backdrop-blur-sm shadow-xl active:scale-90 transition-transform">+</button>
 
     <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-[60]">
         <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border text-center shadow-2xl">
@@ -94,7 +94,7 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, getDocs, collection, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, getDocs, collection, query, where, orderBy, addDoc, serverTimestamp, getAggregateFromServer, sum } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let userProfile = null;
 
@@ -184,27 +184,28 @@
             document.getElementById('totalSouls').innerText = "...";
 
             try {
-                const q = query(collection(db, "salvations"), where("userId", "==", auth.currentUser.uid));
-                const snap = await getDocs(q);
-                let total = 0;
-                const now = new Date(); now.setHours(0,0,0,0);
+                let constraints = [where("userId", "==", auth.currentUser.uid)];
+                const now = new Date();
+                let startLimit = null;
 
-                snap.forEach(d => {
-                    const data = d.data(); const ev = new Date(data.eventDate); const evDO = new Date(data.eventDate); evDO.setHours(0,0,0,0);
-                    let inc = false;
-                    if(range === 'today') inc = evDO.getTime() === now.getTime();
-                    else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); inc = evDO >= sW; }
-                    else if(range === 'month') inc = ev.getMonth() === now.getMonth() && ev.getFullYear() === now.getFullYear();
-                    else if(range === 'custom') { 
-                        const s = new Date(document.getElementById('startDate').value); s.setHours(0,0,0,0);
-                        const e = new Date(document.getElementById('endDate').value); e.setHours(23,59,59);
-                        inc = ev >= s && ev <= e; 
-                    }
-                    if(inc) {
-                        total += data.count;
-                    }
-                });
-                document.getElementById('totalSouls').innerText = total;
+                if(range === 'today') { startLimit = new Date(now.setHours(0,0,0,0)).toISOString(); }
+                else if(range === 'week') { 
+                    const sW = new Date(now); 
+                    sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); 
+                    startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); 
+                }
+                else if(range === 'month') { startLimit = new Date(now.getFullYear(), now.getMonth(), 1).toISOString(); }
+                else if(range === 'custom') { startLimit = new Date(document.getElementById('startDate').value).toISOString(); }
+
+                if(startLimit) constraints.push(where("eventDate", ">=", startLimit));
+                if(range === 'custom') constraints.push(where("eventDate", "<=", new Date(new Date(document.getElementById('endDate').value).setHours(23,59,59)).toISOString()));
+
+                const q = query(collection(db, "salvations"), ...constraints);
+                
+                // Server-side Aggregation
+                const soulSnap = await getAggregateFromServer(q, { total: sum('count') });
+                document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
+
             } catch(e) { console.error(e); }
         };
 
