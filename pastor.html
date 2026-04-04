@@ -28,7 +28,7 @@
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-6 text-center">
+    <main class="max-w-4xl mx-auto p-6 pb-32 text-center">
         <header class="mb-10">
             <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold">PASTOR</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
@@ -95,7 +95,7 @@
         </div>
     </main>
 
-    <button onclick="openModal()" class="fab-button">+</button>
+    <button onclick="openModal()" class="fab-button bg-indigo-600/90 backdrop-blur-sm shadow-xl active:scale-90 transition-transform">+</button>
 
     <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-[60]">
         <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border text-center shadow-2xl">
@@ -244,7 +244,6 @@
                 if (selCh === 'all') constraints.push(where("churchId", "in", userProfile.churchId));
                 else constraints.push(where("churchId", "==", selCh));
 
-                // Date logic
                 const now = new Date(); 
                 let startLimit = null;
                 if(range === 'today') { startLimit = new Date(now.setHours(0,0,0,0)).toISOString(); }
@@ -261,11 +260,9 @@
 
                 const q = query(baseQuery, ...constraints);
                 
-                // PERFORMANCE: Server-side Aggregation
                 const soulSnap = await getAggregateFromServer(q, { total: sum('count') });
                 document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
 
-                // Active member fetch (Still requires a standard fetch to count unique users on client side)
                 const memberSnap = await getDocs(q);
                 let uniqueUsers = new Set();
                 memberSnap.forEach(d => uniqueUsers.add(d.data().userId));
