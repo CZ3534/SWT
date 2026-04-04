@@ -214,6 +214,7 @@
                 const now = new Date();
                 const todayStr = now.toISOString().split('T')[0];
 
+                // 1. DETERMINE TIME RANGE & BUCKETS
                 if (cDate) {
                     bucketPaths.push(`daily_stats/${cDate}`);
                     soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", cDate + "T00:00"), where("eventDate", "<=", cDate + "T23:59"));
@@ -241,21 +242,42 @@
                     soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", sundayStr + "T00:00"));
                 }
 
-                // 1. Aggregation Read for Souls
+                // 2. FETCH TOTAL SOULS (Aggregation)
                 const soulSnap = await getAggregateFromServer(soulQuery, { total: sum('count') });
-                document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
+                const totalValue = soulSnap.data().total;
 
-                // 2. Bucket Merge for unique members
+                if (totalValue === null || totalValue === 0) {
+                    document.getElementById('totalSouls').innerText = "0";
+                    document.getElementById('totalSW').innerText = "0";
+                    showToast("No records found for this period.");
+                    return;
+                }
+                document.getElementById('totalSouls').innerText = totalValue;
+
+                // 3. FETCH UNIQUE MEMBERS (Bucket Strategy)
                 let uniqueUIDs = new Set();
                 const churchIds = (selCh === 'all') ? userProfile.churchId : [selCh];
                 for (const chId of churchIds) {
                     for (const path of bucketPaths) {
                         const bSnap = await getDoc(doc(db, `churches/${chId}/${path}`));
-                        if (bSnap.exists()) bSnap.data().members.forEach(id => uniqueUIDs.add(id));
+                        if (bSnap.exists()) {
+                            const members = bSnap.data().members || [];
+                            members.forEach(id => uniqueUIDs.add(id));
+                        }
                     }
                 }
                 document.getElementById('totalSW').innerText = uniqueUIDs.size;
-            } catch(e) { showToast("Error loading stats."); }
+
+            } catch(e) { 
+                console.error(e);
+                if (e.code === 'failed-precondition') {
+                    showToast("System Update Required: Missing Index.");
+                } else {
+                    showToast("Error loading stats.");
+                }
+                document.getElementById('totalSouls').innerText = "0";
+                document.getElementById('totalSW').innerText = "0";
+            }
         };
 
         window.handleDataSubmit = async () => {
@@ -288,6 +310,7 @@
         };
 
         window.handleLogout = () => signOut(auth).then(() => { sessionStorage.clear(); window.location.replace("index.html"); });
+        
         window.openChurchManager = () => {
             const list = document.getElementById('church-list'); list.innerHTML = "";
             userProfile.churchId.forEach(c => {
@@ -295,6 +318,7 @@
             });
             document.getElementById('church-modal').classList.remove('hidden');
         };
+
         window.addNewChurch = async () => {
             const n = document.getElementById('newChurchName').value; if(!n) return;
             const c = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -306,15 +330,21 @@
                 await refreshUI(); openChurchManager(); showToast("Church Code Added");
             } catch(e) { showToast("Error adding church"); }
         };
+
         window.toggleDarkMode = () => { 
             const isDark = document.getElementById('main-html').classList.toggle('dark'); 
             document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
             document.getElementById('moon-icon').classList.toggle('hidden', isDark);
             localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
         };
+
         window.closeChurchManager = () => document.getElementById('church-modal').classList.add('hidden');
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
-        window.openModal = () => { document.getElementById('modal').classList.remove('hidden'); document.getElementById('soulCount').value = 1; document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); };
+        window.openModal = () => { 
+            document.getElementById('modal').classList.remove('hidden'); 
+            document.getElementById('soulCount').value = 1; 
+            document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); 
+        };
         window.increment = () => document.getElementById('soulCount').value++;
         window.decrement = () => { if(document.getElementById('soulCount').value > 1) document.getElementById('soulCount').value--; };
     </script>
