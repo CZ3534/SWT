@@ -72,12 +72,15 @@
                 } else {
                     const userData = docSnap.data();
                     
-                    // ACCESS CONTROL BOUNCER logic
+                    // BOUNCER LOGIC: Explicitly block 'inactive' only.
+                    // Legacy users without the status field will be allowed in.
                     if (userData.status === 'inactive') {
                         alert("Access Denied: Your account has been deactivated. Please contact your pastor.");
-                        await signOut(auth);
-                        sessionStorage.clear();
-                        window.location.reload();
+                        try {
+                            await signOut(auth);
+                            sessionStorage.clear();
+                            window.location.reload();
+                        } catch (e) { console.error("Logout failed", e); }
                         return;
                     }
 
