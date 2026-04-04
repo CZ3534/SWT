@@ -56,12 +56,22 @@
         <p class="mt-8 text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">Soulwinning Baptist Church Ministry Tool</p>
     </div>
 
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
+
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let isSignUp = false;
+
+        // Dynamic Toast Function
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        };
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -72,14 +82,14 @@
                 } else {
                     const userData = docSnap.data();
                     
-                    // BOUNCER LOGIC: Explicitly block 'inactive' only.
-                    // Legacy users without the status field will be allowed in.
+                    // BOUNCER LOGIC
                     if (userData.status === 'inactive') {
-                        alert("Access Denied: Your account has been deactivated. Please contact your pastor.");
+                        showToast("Account deactivated. Contact your pastor.");
                         try {
                             await signOut(auth);
                             sessionStorage.clear();
-                            window.location.reload();
+                            // Delay reload slightly to let them read the toast
+                            setTimeout(() => window.location.reload(), 2000);
                         } catch (e) { console.error("Logout failed", e); }
                         return;
                     }
@@ -109,25 +119,25 @@
         window.handleAuth = async () => {
             const e = document.getElementById('email').value, p = document.getElementById('password').value;
             const btn = document.getElementById('auth-btn');
-            if(!e || !p) return alert("Fields required.");
+            if(!e || !p) return showToast("Fields required.");
             
             btn.innerText = "Processing..."; btn.disabled = true;
             try {
                 if (isSignUp) await createUserWithEmailAndPassword(auth, e, p);
                 else await signInWithEmailAndPassword(auth, e, p);
             } catch (err) {
-                alert(err.message);
+                showToast(err.message);
                 btn.innerText = "Continue"; btn.disabled = false;
             }
         };
 
         window.forgotPassword = async () => {
             const email = document.getElementById('email').value;
-            if (!email) return alert("Please enter your email address first.");
+            if (!email) return showToast("Enter your email first.");
             try {
                 await sendPasswordResetEmail(auth, email);
-                alert("A password reset link has been sent to your email.");
-            } catch (err) { alert(err.message); }
+                showToast("Reset link sent to your email.");
+            } catch (err) { showToast(err.message); }
         };
 
         if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); }
