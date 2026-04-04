@@ -99,20 +99,14 @@
         let userProfile = null;
 
         const initTheme = () => {
-            const isDark = localStorage.getItem('theme') === 'dark';
-            if (isDark) {
+            if (localStorage.getItem('theme') === 'dark') {
                 document.getElementById('main-html').classList.add('dark');
                 document.getElementById('sun-icon').classList.remove('hidden');
                 document.getElementById('moon-icon').classList.add('hidden');
-            } else {
-                document.getElementById('main-html').classList.remove('dark');
-                document.getElementById('sun-icon').classList.add('hidden');
-                document.getElementById('moon-icon').classList.remove('hidden');
             }
         };
         initTheme();
 
-        // New Global Toast Function
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
             t.innerText = msg;
@@ -127,28 +121,31 @@
                 return; 
             }
 
-            const cachedData = sessionStorage.getItem('userContext');
-            if (cachedData) {
-                userProfile = JSON.parse(cachedData);
+            try {
+                // BOUNCER: Fresh check on load/focus
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
+                
+                userProfile = snap.data();
+
+                // SESSION PERSISTENCE (Bouncer)
+                if (userProfile.status === 'inactive') {
+                    await signOut(auth);
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
+                    return;
+                }
+
                 if (userProfile.role !== 'member') {
                     window.location.replace("pastor.html");
                     return;
                 }
-                renderProfileUI(userProfile, userProfile.churchNames);
-            } else {
-                const snap = await getDoc(doc(db, "profiles", user.uid));
-                if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
-                userProfile = snap.data();
-                
-                if (userProfile.role === 'superadmin') { window.location.replace("admin.html"); return; }
-                if (userProfile.role === 'pastor') { window.location.replace("pastor.html"); return; }
-                
+
+                // Load church names
                 let churchNames = {};
                 for(const code of userProfile.churchId) {
                     const d = await getDoc(doc(db, "churches", code));
-                    if(d.exists()) {
-                        churchNames[code] = d.data().name;
-                    }
+                    if(d.exists()) churchNames[code] = d.data().name;
                 }
 
                 sessionStorage.setItem('userContext', JSON.stringify({
@@ -157,6 +154,10 @@
                 }));
 
                 renderProfileUI(userProfile, churchNames);
+
+            } catch (e) {
+                console.error(e);
+                window.location.replace("index.html");
             }
         });
 
@@ -196,20 +197,15 @@
                 const now = new Date();
                 let startLimit = null;
 
-                if(range === 'today') { startLimit = new Date(now.setHours(0,0,0,0)).toISOString(); }
-                else if(range === 'week') { 
-                    const sW = new Date(now); 
-                    sW.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); 
-                    startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); 
-                }
-                else if(range === 'month') { startLimit = new Date(now.getFullYear(), now.getMonth(), 1).toISOString(); }
-                else if(range === 'custom') { startLimit = new Date(document.getElementById('startDate').value).toISOString(); }
+                if(range === 'today') startLimit = new Date(now.setHours(0,0,0,0)).toISOString();
+                else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay()); startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); }
+                else if(range === 'month') startLimit = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+                else if(range === 'custom') startLimit = new Date(document.getElementById('startDate').value).toISOString();
 
                 if(startLimit) constraints.push(where("eventDate", ">=", startLimit));
                 if(range === 'custom') constraints.push(where("eventDate", "<=", new Date(new Date(document.getElementById('endDate').value).setHours(23,59,59)).toISOString()));
 
                 const q = query(collection(db, "salvations"), ...constraints);
-                
                 const soulSnap = await getAggregateFromServer(q, { total: sum('count') });
                 document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
 
