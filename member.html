@@ -30,33 +30,38 @@
 
     <main class="max-w-4xl mx-auto p-6 text-center">
         <header class="mb-10">
-            <div id="role-display" class="badge-base badge-role mb-2">MEMBER</div>
+            <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold">MEMBER</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
             <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
             
-            <div class="mt-8 p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm max-w-sm mx-auto">
-                <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10 dark:text-white">
-                    <option value="all">All-Time Records</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="custom">Custom Range</option>
-                </select>
-                <div id="custom-date-container" class="hidden flex gap-2 mb-4">
-                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
-                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
-                </div>
-                <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Load Data</button>
-            </div>
-
-            <div class="flex flex-col items-center gap-3 mt-6">
-                <div class="flex justify-center gap-3 w-full max-w-xs">
-                    <button onclick="window.location.href='history.html'" class="flex-1 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-4 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">
+            <div class="mt-10 max-w-sm mx-auto">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Personal</label>
+                <div class="p-4 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm flex flex-col gap-3">
+                    <button onclick="window.open('https://forms.gle/bQvsGq9EgJ2PiHYP8', '_blank')" class="w-full text-[10px] font-bold bg-indigo-600 text-white px-6 py-4 rounded-2xl uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        Record Prospect Contacts
+                    </button>
+                    <button onclick="window.location.href='history.html'" class="w-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-6 py-4 rounded-2xl uppercase active:scale-95 transition-all shadow-sm">
                         My History
                     </button>
-                    <button onclick="window.open('https://forms.gle/bQvsGq9EgJ2PiHYP8', '_blank')" class="flex-1 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 px-4 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm border border-indigo-200 dark:border-indigo-800">
-                        Record Prospects
-                    </button>
+                </div>
+            </div>
+
+            <div class="mt-10 max-w-sm mx-auto">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest text-center">Recent Activity Report</label>
+                <div class="p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm">
+                    <select id="dateFilterRange" onchange="toggleCustomDate()" class="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10 dark:text-white">
+                        <option value="all">All-Time Records</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                    <div id="custom-date-container" class="hidden flex gap-2 mb-4">
+                        <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
+                        <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
+                    </div>
+                    <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Load Data</button>
                 </div>
             </div>
         </header>
