@@ -33,57 +33,64 @@
         <header class="mb-10 text-center">
             <div id="role-display" class="badge-base badge-role mb-2 uppercase text-[10px] tracking-widest font-bold">...</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
-            <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
+            <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2 border-b dark:border-slate-800 pb-8"></div>
             
-            <h3 class="text-2xl font-bold mt-8 text-slate-600 dark:text-slate-400">My History</h3>
+            <h3 class="text-2xl font-bold mt-8 text-indigo-600">Entry Manager</h3>
+            <p class="text-xs text-slate-400 mt-1">View and manage records from the last 31 days.</p>
         </header>
 
-        <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2rem] p-6 shadow-sm mb-6">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 px-1">Time Period</label>
+        <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2rem] p-6 shadow-sm mb-6 max-w-sm mx-auto">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 px-1 text-center">Select Time Period</label>
             <select id="dateRange" class="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 px-4 py-3 rounded-2xl text-xs font-bold mb-2 dark:text-white" onchange="toggleCustomDate()">
-                <option value="all">All Time</option>
+                <option value="" disabled selected>Choose Range...</option>
                 <option value="week">This Week</option>
-                <option value="month" selected>This Month</option>
-                <option value="custom">Custom Range...</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Range (Max 31 Days)</option>
             </select>
 
             <div id="custom-date-container" class="hidden grid grid-cols-2 gap-3 mt-4">
                 <input type="date" id="startDate" class="bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-[10px] p-3 dark:text-white">
                 <input type="date" id="endDate" class="bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-[10px] p-3 dark:text-white">
-                <button onclick="applyCustomFilter()" class="col-span-2 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase mt-2 active:scale-95 transition-all">Apply Filter</button>
             </div>
+            
+            <button onclick="handleLoadRequest()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-bold uppercase mt-4 active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Fetch Records</button>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Reports</p>
-                <span id="stat-reports" class="text-3xl font-bold">0</span>
+        <div id="results-area" class="hidden">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Logs</p>
+                    <span id="stat-reports" class="text-3xl font-bold">0</span>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase text-indigo-600">Total Souls</p>
+                    <span id="stat-souls" class="text-3xl font-bold text-indigo-600">0</span>
+                </div>
             </div>
-            <div class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border dark:border-slate-800 shadow-sm text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase text-indigo-600">Total Souls</p>
-                <span id="stat-souls" class="text-3xl font-bold text-indigo-600">0</span>
-            </div>
+
+            <section class="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-hidden shadow-sm text-left mb-20">
+                <div class="px-6 py-4 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400">
+                    Results
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-[10px] text-slate-400 uppercase border-b dark:border-slate-800">
+                            <tr>
+                                <th class="px-6 py-4">Date</th>
+                                <th class="px-6 py-4 text-center">Count</th>
+                                <th class="px-6 py-4">Note</th>
+                                <th class="px-6 py-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list" class="divide-y dark:divide-slate-800 text-sm"></tbody>
+                    </table>
+                </div>
+            </section>
         </div>
 
-        <section class="bg-white dark:bg-slate-900 rounded-[2.5rem] border dark:border-slate-800 overflow-hidden shadow-sm text-left">
-            <div class="px-6 py-4 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 font-bold text-[10px] uppercase text-slate-400 flex justify-between items-center">
-                <span>Soulwinning Logs</span>
-                <i class="bi bi-info-circle"></i>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="text-[10px] text-slate-400 uppercase border-b dark:border-slate-800">
-                        <tr>
-                            <th class="px-6 py-4">Date</th>
-                            <th class="px-6 py-4 text-center">Count</th>
-                            <th class="px-6 py-4">Note</th>
-                            <th class="px-6 py-4 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-list" class="divide-y dark:divide-slate-800 text-sm"></tbody>
-                </table>
-            </div>
-        </section>
+        <div id="initial-message" class="text-center py-20 text-slate-400 italic">
+            Select a time period above to manage your logs.
+        </div>
     </main>
 
     <script type="module">
@@ -91,10 +98,8 @@
         import { collection, query, where, getDocs, orderBy, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        // --- THEME LOGIC ---
         const initTheme = () => {
-            const isDark = localStorage.getItem('theme') === 'dark';
-            if (isDark) {
+            if (localStorage.getItem('theme') === 'dark') {
                 document.getElementById('main-html').classList.add('dark');
                 document.getElementById('sun-icon')?.classList.remove('hidden');
                 document.getElementById('moon-icon')?.classList.add('hidden');
@@ -110,17 +115,13 @@
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         };
 
-        // --- AUTH & HEADER ---
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.replace('index.html'); return; }
             const cachedData = sessionStorage.getItem('userContext');
             if (cachedData) {
-                try {
-                    const context = JSON.parse(cachedData);
-                    renderHeader(context.displayName, context.role, context.churchNames || context.churches || {});
-                } catch (e) { fetchFreshProfile(user.uid); }
+                const context = JSON.parse(cachedData);
+                renderHeader(context.displayName, context.role, context.churchNames || {});
             } else { fetchFreshProfile(user.uid); }
-            loadHistory();
         });
 
         async function fetchFreshProfile(uid) {
@@ -142,50 +143,37 @@
             document.getElementById('role-display').innerText = (role || "Member").toUpperCase();
             const tagContainer = document.getElementById('church-list-tags');
             let tagsHtml = "";
-            const entries = churches ? Object.values(churches) : [];
-            if (entries.length > 0) {
-                entries.forEach(c => tagsHtml += `<span class="badge-base badge-church">${c}</span>`);
-            } else {
-                tagsHtml = `<span class="text-slate-500 text-[10px]">No Church Assigned</span>`;
-            }
-            tagContainer.innerHTML = tagsHtml;
+            Object.values(churches).forEach(c => tagsHtml += `<span class="badge-base badge-church">${c}</span>`);
+            tagContainer.innerHTML = tagsHtml || `<span class="text-slate-500 text-[10px]">No Church Assigned</span>`;
         }
 
-        // --- UPDATED DATE LOGIC (Corrected for "T" Timestamp format) ---
-        function getDateStrings() {
+        window.handleLoadRequest = () => {
             const range = document.getElementById('dateRange').value;
-            const now = new Date();
-            let startStr = "1970-01-01T00:00";
-            let endStr = "9999-12-31T23:59";
+            if(!range) { alert("Please select a time period."); return; }
 
-            const toISO = (date) => date.toISOString().split('T')[0];
-
-            if (range === 'week') {
-                const day = now.getDay();
-                const start = new Date(now.setDate(now.getDate() - day));
-                startStr = toISO(start) + "T00:00";
-                endStr = toISO(new Date()) + "T23:59";
-            } else if (range === 'month') {
-                const start = new Date(now.getFullYear(), now.getMonth(), 1);
-                startStr = toISO(start) + "T00:00";
-                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                endStr = toISO(end) + "T23:59";
-            } else if (range === 'custom') {
-                const s = document.getElementById('startDate').value;
-                const e = document.getElementById('endDate').value;
-                if (s) startStr = s + "T00:00";
-                if (e) endStr = e + "T23:59";
+            if(range === 'custom') {
+                const s = new Date(document.getElementById('startDate').value);
+                const e = new Date(document.getElementById('endDate').value);
+                if(!s || !e || isNaN(s) || isNaN(e)) { alert("Please select both dates."); return; }
+                
+                const diffTime = Math.abs(e - s);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if(diffDays > 31) {
+                    alert("Date range cannot exceed 31 days for performance reasons.");
+                    return;
+                }
             }
-            return { startStr, endStr };
-        }
+            loadHistory();
+        };
 
         async function loadHistory() {
             const user = auth.currentUser;
-            if (!user) return;
             const tableBody = document.getElementById('history-list');
             const { startStr, endStr } = getDateStrings();
 
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-400 italic">Searching logs...</td></tr>';
+            document.getElementById('initial-message').classList.add('hidden');
+            document.getElementById('results-area').classList.remove('hidden');
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-slate-400 italic">Fetching records...</td></tr>';
 
             try {
                 const q = query(
@@ -204,11 +192,9 @@
                     const data = snapDoc.data();
                     const souls = parseInt(data.count) || 0;
                     soulsTotal += souls;
-                    const cleanDate = data.eventDate ? data.eventDate.split('T')[0] : '---';
-
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                            <td class="px-6 py-4 text-xs font-medium text-slate-500">${cleanDate}</td>
+                            <td class="px-6 py-4 text-xs font-medium text-slate-500">${data.eventDate.split('T')[0]}</td>
                             <td class="px-6 py-4 text-center font-bold text-indigo-600">${souls}</td>
                             <td class="px-6 py-4 text-xs text-slate-400 italic truncate max-w-[150px]">${data.note || ''}</td>
                             <td class="px-6 py-4 text-right">
@@ -216,18 +202,35 @@
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
-                        </tr>
-                    `;
+                        </tr>`;
                 });
 
-                tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-10 text-slate-400">No records found.</td></tr>';
+                tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-10 text-slate-400">No records in this range.</td></tr>';
                 document.getElementById('stat-reports').innerText = snapshot.size;
                 document.getElementById('stat-souls').innerText = soulsTotal;
+            } catch (error) { tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-400">Error loading data.</td></tr>'; }
+        }
 
-            } catch (error) {
-                console.error(error);
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-400">Error loading data. Check console.</td></tr>';
+        function getDateStrings() {
+            const range = document.getElementById('dateRange').value;
+            const now = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (range === 'week') {
+                start.setDate(now.getDate() - now.getDay());
+            } else if (range === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            } else if (range === 'custom') {
+                start = new Date(document.getElementById('startDate').value);
+                end = new Date(document.getElementById('endDate').value);
             }
+            
+            return { 
+                startStr: start.toISOString().split('T')[0] + "T00:00", 
+                endStr: end.toISOString().split('T')[0] + "T23:59" 
+            };
         }
 
         window.deleteEntry = async (id) => {
@@ -239,11 +242,9 @@
             }
         };
 
-        window.applyCustomFilter = () => loadHistory();
         window.toggleCustomDate = () => {
             const isCustom = document.getElementById('dateRange').value === 'custom';
             document.getElementById('custom-date-container').classList.toggle('hidden', !isCustom);
-            if(!isCustom) loadHistory();
         };
     </script>
 </body>
