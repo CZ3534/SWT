@@ -45,8 +45,8 @@
                     <option value="custom">Custom Range</option>
                 </select>
                 <div id="custom-date-container" class="hidden flex gap-2 mb-4">
-                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
-                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800">
+                    <input type="date" id="startDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
+                    <input type="date" id="endDate" class="flex-1 bg-slate-50 border rounded-xl text-[10px] p-2 dark:bg-slate-800 dark:text-white">
                 </div>
                 <button onclick="handleLoadRequest()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Generate Global Report</button>
             </div>
@@ -68,7 +68,7 @@
                 </div>
                 <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Participating Members</p>
-                    <span id="totalSW" class="text-5xl font-bold">0</span>
+                    <span id="totalSW" class="text-5xl font-bold text-indigo-600">0</span>
                 </div>
             </div>
         </div>
@@ -115,14 +115,26 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.replace("index.html"); return; }
-            const snap = await getDoc(doc(db, "profiles", user.uid));
-            if (!snap.exists() || snap.data().role !== 'superadmin') { 
-                window.location.replace("index.html"); 
-                return; 
+            try {
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists() || snap.data().role !== 'superadmin') { 
+                    window.location.replace("index.html"); 
+                    return; 
+                }
+                userProfile = snap.data();
+                
+                if (userProfile.status === 'inactive') {
+                    await signOut(auth);
+                    window.location.replace("index.html");
+                    return;
+                }
+
+                document.getElementById('user-display-name').innerText = userProfile.displayName;
+                await populateAllChurches();
+            } catch (e) {
+                console.error(e);
+                window.location.replace("index.html");
             }
-            userProfile = snap.data();
-            document.getElementById('user-display-name').innerText = userProfile.displayName;
-            await populateAllChurches();
         });
 
         async function populateAllChurches() {
@@ -139,7 +151,7 @@
             if(range === 'custom') {
                 const s = document.getElementById('startDate').value;
                 const e = document.getElementById('endDate').value;
-                if(!s || !e) return showToast("Please select both dates");
+                if(!s || !e) return showToast("Select both dates");
             }
             loadStats();
         };
@@ -152,30 +164,75 @@
             document.getElementById('totalSW').innerText = "...";
 
             try {
-                let baseQuery = collection(db, "salvations");
-                let constraints = [];
+                const now = new Date();
+                let startLimit = "";
+                let bucketPaths = [];
+                const todayStr = now.toISOString().split('T')[0];
+
+                // 1. DATE LOGIC SETUP
+                if(range === 'today') {
+                    startLimit = todayStr + "T00:00";
+                    bucketPaths.push(`daily_stats/${todayStr}`);
+                } else if(range === 'week') {
+                    const sW = new Date(now); sW.setDate(now.getDate() - now.getDay());
+                    startLimit = sW.toISOString().split('T')[0] + "T00:00";
+                    for(let i=0; i<7; i++) {
+                        const d = new Date(sW); d.setDate(sW.getDate() + i);
+                        bucketPaths.push(`daily_stats/${d.toISOString().split('T')[0]}`);
+                    }
+                } else if(range === 'month') {
+                    const mTarget = todayStr.substring(0, 7);
+                    startLimit = mTarget + "-01T00:00";
+                    bucketPaths.push(`monthly_stats/${mTarget}`);
+                } else if(range === 'custom') {
+                    startLimit = document.getElementById('startDate').value + "T00:00";
+                }
+
+                // 2. SOUL AGGREGATION (High Performance)
+                let constraints = [where("eventDate", ">=", startLimit)];
                 if (selCh !== 'all') constraints.push(where("churchId", "==", selCh));
+                if (range === 'custom') {
+                    constraints.push(where("eventDate", "<=", document.getElementById('endDate').value + "T23:59"));
+                }
 
-                const now = new Date(); let startLimit = null;
-                if(range === 'today') startLimit = new Date(now.setHours(0,0,0,0)).toISOString();
-                else if(range === 'week') { const sW = new Date(now); sW.setDate(now.getDate() - now.getDay()); startLimit = new Date(sW.setHours(0,0,0,0)).toISOString(); }
-                else if(range === 'month') startLimit = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-                else if(range === 'custom') startLimit = new Date(document.getElementById('startDate').value).toISOString();
+                const soulQ = query(collection(db, "salvations"), ...constraints);
+                const soulSnap = await getAggregateFromServer(soulQ, { total: sum('count') });
+                const totalVal = soulSnap.data().total;
 
-                if(startLimit) constraints.push(where("eventDate", ">=", startLimit));
-                if(range === 'custom') constraints.push(where("eventDate", "<=", new Date(new Date(document.getElementById('endDate').value).setHours(23,59,59)).toISOString()));
+                if (totalVal === null || totalVal === 0) {
+                    document.getElementById('totalSouls').innerText = "0";
+                    document.getElementById('totalSW').innerText = "0";
+                    showToast("No data for this period.");
+                    return;
+                }
+                document.getElementById('totalSouls').innerText = totalVal;
 
-                const q = query(baseQuery, ...constraints);
+                // 3. MEMBER PARTICIPATION (Bucket logic)
+                let uniqueUIDs = new Set();
                 
-                const soulSnap = await getAggregateFromServer(q, { total: sum('count') });
-                document.getElementById('totalSouls').innerText = soulSnap.data().total || 0;
+                if (selCh !== 'all') {
+                    // Specific Church: Use Buckets (FAST)
+                    for (const path of bucketPaths) {
+                        const bSnap = await getDoc(doc(db, `churches/${selCh}/${path}`));
+                        if (bSnap.exists()) bSnap.data().members.forEach(id => uniqueUIDs.add(id));
+                    }
+                    document.getElementById('totalSW').innerText = uniqueUIDs.size;
+                } else {
+                    // Global Report: Bucket strategy doesn't work for Global totals easily, 
+                    // so we do a standard query for the demo, but catching read counts.
+                    const memberSnap = await getDocs(soulQ);
+                    memberSnap.forEach(d => uniqueUIDs.add(d.data().userId));
+                    document.getElementById('totalSW').innerText = uniqueUIDs.size;
+                }
 
-                const memberSnap = await getDocs(q);
-                let uniqueUsers = new Set();
-                memberSnap.forEach(d => uniqueUsers.add(d.data().userId));
-                document.getElementById('totalSW').innerText = uniqueUsers.size;
-
-            } catch(e) { showToast("Error: Index required or connection lost."); }
+            } catch(e) {
+                console.error(e);
+                if (e.code === 'failed-precondition') {
+                    showToast("System Update Required: Missing Index.");
+                } else {
+                    showToast("Error loading stats.");
+                }
+            }
         };
 
         window.openAdminManager = () => {
@@ -213,8 +270,7 @@
         };
 
         window.toggleDarkMode = () => { 
-            const html = document.getElementById('main-html'); 
-            const isDark = html.classList.toggle('dark'); 
+            const isDark = document.getElementById('main-html').classList.toggle('dark'); 
             document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
             document.getElementById('moon-icon').classList.toggle('hidden', isDark);
             localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
