@@ -49,10 +49,15 @@
                 <button onclick="loadStats()" class="w-full py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20">Load Data</button>
             </div>
 
-            <div class="flex justify-center gap-3 mt-6">
-                <button onclick="window.location.href='history.html'" class="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-10 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">
-                    My History
-                </button>
+            <div class="flex flex-col items-center gap-3 mt-6">
+                <div class="flex justify-center gap-3 w-full max-w-xs">
+                    <button onclick="window.location.href='history.html'" class="flex-1 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-4 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm">
+                        My History
+                    </button>
+                    <button onclick="window.open('https://forms.gle/bQvsGq9EgJ2PiHYP8', '_blank')" class="flex-1 text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 px-4 py-3 rounded-full uppercase active:scale-95 transition-all shadow-sm border border-indigo-200 dark:border-indigo-800">
+                        Record Prospects
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -114,21 +119,15 @@
                 return; 
             }
 
-            // 🛡️ Performance Optimization: Check Session Cache First
             const cachedData = sessionStorage.getItem('userContext');
             if (cachedData) {
                 userProfile = JSON.parse(cachedData);
-                
-                // Security check for role mismatch
                 if (userProfile.role !== 'member') {
                     window.location.replace("pastor.html");
                     return;
                 }
-                
-                // Pass churchNames from the cache to the UI renderer
                 renderProfileUI(userProfile, userProfile.churchNames);
             } else {
-                // Fallback: Fetch from Firebase if cache is missing
                 const snap = await getDoc(doc(db, "profiles", user.uid));
                 if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
                 userProfile = snap.data();
@@ -144,7 +143,6 @@
                     }
                 }
 
-                // Update cache for the next load or the history page
                 sessionStorage.setItem('userContext', JSON.stringify({
                     ...userProfile,
                     churchNames: churchNames
@@ -154,14 +152,11 @@
             }
         });
 
-        // Combined helper function to ensure tags show up in all scenarios
         function renderProfileUI(profile, namesMap = null) {
             document.getElementById('user-display-name').innerText = profile.displayName;
             document.getElementById('role-display').innerText = profile.role.toUpperCase();
-            
             const tagContainer = document.getElementById('church-list-tags');
             const dataToUse = namesMap || profile.churchNames;
-            
             let tagsHtml = "";
             if (dataToUse && Object.keys(dataToUse).length > 0) {
                 Object.values(dataToUse).forEach(name => {
