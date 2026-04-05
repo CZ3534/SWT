@@ -97,8 +97,10 @@
 
     <script type="module">
         import { db, auth } from './firebase-config.js';
-        import { collection, query, where, getDocs, orderBy, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, query, where, getDocs, orderBy, doc, getDoc, deleteDoc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        let userProfile = null;
 
         const initTheme = () => {
             if (localStorage.getItem('theme') === 'dark') {
@@ -109,7 +111,6 @@
         };
         initTheme();
 
-        // Global Toast Function
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
             t.innerText = msg;
@@ -129,22 +130,23 @@
             if (!user) { window.location.replace('index.html'); return; }
             const cachedData = sessionStorage.getItem('userContext');
             if (cachedData) {
-                const context = JSON.parse(cachedData);
-                renderHeader(context.displayName, context.role, context.churchNames || {});
+                userProfile = JSON.parse(cachedData);
+                renderHeader(userProfile.displayName, userProfile.role, userProfile.churchNames || {});
             } else { fetchFreshProfile(user.uid); }
         });
 
         async function fetchFreshProfile(uid) {
             const snap = await getDoc(doc(db, "profiles", uid));
             if (snap.exists()) {
-                const profile = snap.data();
+                userProfile = snap.data();
                 const churches = {};
-                for(const code of (profile.churchId || [])) {
+                for(const code of (userProfile.churchId || [])) {
                     const d = await getDoc(doc(db, "churches", code));
                     if(d.exists()) churches[code] = d.data().name;
                 }
-                renderHeader(profile.displayName, profile.role, churches);
-                sessionStorage.setItem('userContext', JSON.stringify({ ...profile, churchNames: churches }));
+                userProfile.churchNames = churches;
+                renderHeader(userProfile.displayName, userProfile.role, churches);
+                sessionStorage.setItem('userContext', JSON.stringify(userProfile));
             }
         }
 
@@ -165,13 +167,9 @@
                 const s = new Date(document.getElementById('startDate').value);
                 const e = new Date(document.getElementById('endDate').value);
                 if(!s || !e || isNaN(s) || isNaN(e)) { showToast("Please select both dates."); return; }
-                
                 const diffTime = Math.abs(e - s);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if(diffDays > 31) {
-                    showToast("Range cannot exceed 31 days.");
-                    return;
-                }
+                if(diffDays > 31) { showToast("Range cannot exceed 31 days."); return; }
             }
             loadHistory();
         };
@@ -202,13 +200,14 @@
                     const data = snapDoc.data();
                     const souls = parseInt(data.count) || 0;
                     soulsTotal += souls;
+                    // Pass full eventDate to delete function
                     rowsHtml += `
                         <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                             <td class="px-6 py-4 text-xs font-medium text-slate-500">${data.eventDate.split('T')[0]}</td>
                             <td class="px-6 py-4 text-center font-bold text-indigo-600">${souls}</td>
                             <td class="px-6 py-4 text-xs text-slate-400 italic truncate max-w-[150px]">${data.note || ''}</td>
                             <td class="px-6 py-4 text-right">
-                                <button onclick="deleteEntry('${snapDoc.id}')" class="text-slate-400 hover:text-red-500 p-2 transition-colors">
+                                <button onclick="deleteEntry('${snapDoc.id}', '${data.eventDate}')" class="text-slate-400 hover:text-red-500 p-2 transition-colors">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -218,7 +217,10 @@
                 tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" class="text-center py-10 text-slate-400">No records in this range.</td></tr>';
                 document.getElementById('stat-reports').innerText = snapshot.size;
                 document.getElementById('stat-souls').innerText = soulsTotal;
-            } catch (error) { tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-400">Error loading data.</td></tr>'; }
+            } catch (error) { 
+                console.error(error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-red-400">Error loading data.</td></tr>'; 
+            }
         }
 
         function getDateStrings() {
@@ -227,15 +229,9 @@
             let start = new Date();
             let end = new Date();
 
-            if (range === 'week') {
-                start.setDate(now.getDate() - now.getDay());
-            } else if (range === 'month') {
-                start = new Date(now.getFullYear(), now.getMonth(), 1);
-                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            } else if (range === 'custom') {
-                start = new Date(document.getElementById('startDate').value);
-                end = new Date(document.getElementById('endDate').value);
-            }
+            if (range === 'week') { start.setDate(now.getDate() - now.getDay()); } 
+            else if (range === 'month') { start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth() + 1, 0); } 
+            else if (range === 'custom') { start = new Date(document.getElementById('startDate').value); end = new Date(document.getElementById('endDate').value); }
             
             return { 
                 startStr: start.toISOString().split('T')[0] + "T00:00", 
@@ -243,13 +239,49 @@
             };
         }
 
-        window.deleteEntry = async (id) => {
-            if (confirm("Permanently delete this record?")) {
-                try {
-                    await deleteDoc(doc(db, "salvations", id));
-                    showToast("Record deleted.");
-                    loadHistory();
-                } catch (e) { showToast("Delete failed."); }
+        window.deleteEntry = async (id, eventDate) => {
+            if (!confirm("Permanently delete this record?")) return;
+            
+            try {
+                const uid = auth.currentUser.uid;
+                const churchId = userProfile.churchId[0];
+                const dateId = eventDate.split('T')[0];
+                const monthId = dateId.substring(0, 7);
+
+                // 1. DELETE THE ACTUAL RECORD
+                await deleteDoc(doc(db, "salvations", id));
+
+                // 2. BUCKET CLEANUP: CHECK FOR REMAINING LOGS ON THIS DAY
+                const dailyQ = query(collection(db, "salvations"), 
+                    where("userId", "==", uid),
+                    where("eventDate", ">=", dateId + "T00:00"),
+                    where("eventDate", "<=", dateId + "T23:59")
+                );
+                const dailySnap = await getDocs(dailyQ);
+                if (dailySnap.empty) {
+                    await updateDoc(doc(db, `churches/${churchId}/daily_stats`, dateId), {
+                        members: arrayRemove(uid)
+                    }).catch(() => {}); // Catch if bucket doesn't exist
+                }
+
+                // 3. BUCKET CLEANUP: CHECK FOR REMAINING LOGS IN THIS MONTH
+                const monthlyQ = query(collection(db, "salvations"), 
+                    where("userId", "==", uid),
+                    where("eventDate", ">=", monthId + "-01T00:00"),
+                    where("eventDate", "<=", monthId + "-31T23:59")
+                );
+                const monthlySnap = await getDocs(monthlyQ);
+                if (monthlySnap.empty) {
+                    await updateDoc(doc(db, `churches/${churchId}/monthly_stats`, monthId), {
+                        members: arrayRemove(uid)
+                    }).catch(() => {});
+                }
+
+                showToast("Record deleted and participation updated.");
+                loadHistory();
+            } catch (e) { 
+                console.error(e);
+                showToast("Delete failed."); 
             }
         };
 
