@@ -35,8 +35,8 @@
             <p class="text-xs text-slate-400">Activate or deactivate access for church members.</p>
         </header>
 
-        <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] p-6 shadow-sm mb-10 max-w-sm mx-auto">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest text-center">Manage Church</label>
+        <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] p-6 shadow-sm mb-10 max-w-sm mx-auto text-center">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Manage Church</label>
             <select id="churchSelect" class="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 px-4 py-3 rounded-2xl text-xs font-bold mb-4 pr-10 dark:text-white">
                 <option value="" disabled selected>Choose a church...</option>
             </select>
@@ -75,7 +75,7 @@
 
     <script type="module">
         import { db, auth } from './firebase-config.js';
-        import { collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         let allMembers = [];
@@ -90,9 +90,9 @@
         };
         initTheme();
 
-        // New Global Toast Function
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
+            if(!t) return;
             t.innerText = msg;
             t.classList.remove('opacity-0', 'translate-y-10');
             setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
@@ -108,22 +108,45 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.replace('index.html'); return; }
-            const cachedData = sessionStorage.getItem('userContext');
-            if (cachedData) {
-                userProfile = JSON.parse(cachedData);
-                populateChurchDropdown();
+            
+            try {
+                const snap = await getDoc(doc(db, "profiles", user.uid));
+                if (!snap.exists()) { window.location.replace('index.html'); return; }
+                
+                userProfile = snap.data();
+                
+                if (userProfile.role !== 'pastor') {
+                    window.location.replace('index.html');
+                    return;
+                }
+
+                await populateChurchDropdown();
+                
+            } catch (e) {
+                console.error("Auth init error:", e);
+                showToast("Error initializing manager.");
             }
         });
 
-        function populateChurchDropdown() {
+        async function populateChurchDropdown() {
             const select = document.getElementById('churchSelect');
-            const churchNames = userProfile.churchNames || {};
-            Object.keys(churchNames).forEach(id => {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.textContent = churchNames[id];
-                select.appendChild(opt);
-            });
+            if (!select || !userProfile.churchId) return;
+
+            select.innerHTML = '<option value="" disabled selected>Choose a church...</option>';
+
+            for (const id of userProfile.churchId) {
+                try {
+                    const cSnap = await getDoc(doc(db, "churches", id));
+                    if (cSnap.exists()) {
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = cSnap.data().name;
+                        select.appendChild(opt);
+                    }
+                } catch (err) {
+                    console.error(`Error fetching church ${id}:`, err);
+                }
+            }
         }
 
         window.fetchMembers = async () => {
@@ -142,25 +165,33 @@
                 allMembers = [];
                 snap.forEach(d => {
                     const data = d.data();
-                    if (!data.status) data.status = 'active'; 
+                    if (d.id === auth.currentUser.uid) return; // Hide current pastor
                     allMembers.push({ id: d.id, ...data });
                 });
 
                 renderList(allMembers);
-            } catch (e) { showToast("Error loading members"); }
+            } catch (e) { 
+                console.error(e);
+                showToast("Error loading members"); 
+            }
         };
 
         function renderList(members) {
             const listBody = document.getElementById('member-list');
+            if (members.length === 0) {
+                listBody.innerHTML = '<tr><td colspan="3" class="text-center py-10 text-slate-400">No members found.</td></tr>';
+                return;
+            }
+
             listBody.innerHTML = members.map(m => `
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 text-left">
                         <p class="font-bold dark:text-white leading-tight">${m.displayName}</p>
                         <p class="text-[10px] text-slate-400 truncate max-w-[120px]">${m.email}</p>
                     </td>
                     <td class="px-6 py-4 text-center">
                         <span class="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${m.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/30'}">
-                            ${m.status || 'active'}
+                            ${m.status || 'inactive'}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
@@ -169,12 +200,11 @@
                         </button>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="3" class="text-center py-10 text-slate-400">No members found.</td></tr>';
+            `).join('');
         }
 
         window.toggleStatus = async (uid, currentStatus, name) => {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-            // We keep confirm() here because deactivating is a high-impact destructive action
             if (confirm(`Change access for ${name} to ${newStatus.toUpperCase()}?`)) {
                 try {
                     await updateDoc(doc(db, "profiles", uid), { status: newStatus });
