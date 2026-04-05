@@ -168,19 +168,16 @@
         window.setActivePreset = (p) => {
             currentPreset = p;
             
-            // Clear custom inputs
             const dateInput = document.getElementById('customDate');
             const monthInput = document.getElementById('customMonth');
             dateInput.value = "";
             monthInput.value = "";
 
-            // Remove highlights from custom inputs
             [dateInput, monthInput].forEach(input => {
                 input.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-500/20', 'shadow-lg', 'shadow-indigo-500/20');
                 input.classList.add('border-slate-700');
             });
 
-            // Reset all preset buttons look
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/50', 'border-indigo-400');
                 btn.classList.add('bg-slate-100', 'dark:bg-slate-800/50', 'text-slate-500', 'dark:text-slate-400', 'border-transparent');
@@ -198,7 +195,6 @@
             const dateInput = document.getElementById('customDate');
             const monthInput = document.getElementById('customMonth');
 
-            // Reset preset buttons UI
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/50', 'border-indigo-400');
                 btn.classList.add('bg-slate-100', 'dark:bg-slate-800/50', 'text-slate-500', 'dark:text-slate-400', 'border-transparent');
@@ -207,7 +203,6 @@
             if (type === 'date') monthInput.value = "";
             else dateInput.value = "";
 
-            // Toggle highlights based on value
             [dateInput, monthInput].forEach(input => {
                 if (input.value) {
                     input.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20', 'shadow-lg', 'shadow-indigo-500/20');
@@ -225,33 +220,26 @@
                 const snap = await getDoc(doc(db, "profiles", user.uid));
                 if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
                 const data = snap.data();
-
                 if (data.role !== 'pastor') { window.location.replace("index.html"); return; }
-
                 userProfile = data;
                 if (userProfile.status === 'inactive') {
                     await signOut(auth);
                     window.location.replace("index.html");
                     return;
                 }
-
                 document.getElementById('user-display-name').innerText = userProfile.displayName;
                 await refreshUI();
                 setActivePreset('month'); 
-            } catch (e) {
-                console.error("Auth Guard Error:", e);
-            }
+            } catch (e) { console.error("Auth Guard Error:", e); }
         });
 
         async function refreshUI() {
             const filter = document.getElementById('churchFilter');
             const tagContainer = document.getElementById('church-list-tags');
             if(!filter || !tagContainer) return;
-            
             filter.innerHTML = '<option value="all">All My Churches</option>';
             churchNames = {};
             let tagsHtml = "";
-
             for(const code of (userProfile.churchId || [])) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) {
@@ -268,7 +256,6 @@
             if (!userProfile || !userProfile.churchId || userProfile.churchId.length === 0) {
                 return showToast("No churches linked.");
             }
-
             const selCh = document.getElementById('churchFilter').value;
             const cDate = document.getElementById('customDate').value;
             const cMonth = document.getElementById('customMonth').value;
@@ -278,51 +265,60 @@
             document.getElementById('totalSouls').innerText = "...";
             document.getElementById('totalSW').innerText = "...";
 
-            // Dynamic Label Logic
+            const now = new Date();
+            const options = { month: 'long', day: 'numeric', year: 'numeric' };
+
+            // --- Precise Date Labeling Logic ---
             if (cDate) {
-                dateLabel.innerText = new Date(cDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                dateLabel.innerText = new Date(cDate).toLocaleDateString('en-US', options);
             } else if (cMonth) {
                 const [year, month] = cMonth.split('-');
                 dateLabel.innerText = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             } else if (currentPreset === 'today') {
-                dateLabel.innerText = "Today";
+                dateLabel.innerText = now.toLocaleDateString('en-US', options);
             } else if (currentPreset === 'week') {
-                dateLabel.innerText = "This Week";
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                dateLabel.innerText = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
             } else if (currentPreset === 'month') {
-                dateLabel.innerText = "This Month";
+                dateLabel.innerText = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             }
 
             try {
                 let soulQuery;
                 let bucketPaths = [];
-                const now = new Date();
                 const todayStr = now.toISOString().split('T')[0];
+                const churchIds = (selCh === 'all') ? userProfile.churchId : [selCh];
 
                 if (cDate) {
                     bucketPaths.push(`daily_stats/${cDate}`);
-                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", cDate + "T00:00"), where("eventDate", "<=", cDate + "T23:59"));
+                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", churchIds), where("eventDate", ">=", cDate + "T00:00"), where("eventDate", "<=", cDate + "T23:59"));
                 } 
                 else if (cMonth) {
                     bucketPaths.push(`monthly_stats/${cMonth}`);
-                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", cMonth + "-01T00:00"), where("eventDate", "<=", cMonth + "-31T23:59"));
+                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", churchIds), where("eventDate", ">=", cMonth + "-01T00:00"), where("eventDate", "<=", cMonth + "-31T23:59"));
                 }
                 else if (currentPreset === 'today') {
                     bucketPaths.push(`daily_stats/${todayStr}`);
-                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", todayStr + "T00:00"));
+                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", churchIds), where("eventDate", ">=", todayStr + "T00:00"));
                 }
                 else if (currentPreset === 'month') {
                     const thisMonthStr = todayStr.substring(0, 7);
                     bucketPaths.push(`monthly_stats/${thisMonthStr}`);
-                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", thisMonthStr + "-01T00:00"));
+                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", churchIds), where("eventDate", ">=", thisMonthStr + "-01T00:00"));
                 }
                 else if (currentPreset === 'week') {
-                    const sunday = new Date(now.setDate(now.getDate() - now.getDay()));
+                    const sunday = new Date(now);
+                    sunday.setDate(now.getDate() - now.getDay());
                     const sundayStr = sunday.toISOString().split('T')[0];
                     for(let i=0; i<7; i++) {
-                        const d = new Date(sunday); d.setDate(sunday.getDate() + i);
+                        const d = new Date(sunday);
+                        d.setDate(sunday.getDate() + i);
                         bucketPaths.push(`daily_stats/${d.toISOString().split('T')[0]}`);
                     }
-                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", userProfile.churchId), where("eventDate", ">=", sundayStr + "T00:00"));
+                    soulQuery = query(collection(db, "salvations"), where("churchId", "in", churchIds), where("eventDate", ">=", sundayStr + "T00:00"));
                 }
 
                 const soulSnap = await getAggregateFromServer(soulQuery, { total: sum('count') });
@@ -337,7 +333,6 @@
                 document.getElementById('totalSouls').innerText = totalValue;
 
                 let uniqueUIDs = new Set();
-                const churchIds = (selCh === 'all') ? userProfile.churchId : [selCh];
                 for (const chId of churchIds) {
                     for (const path of bucketPaths) {
                         const bSnap = await getDoc(doc(db, `churches/${chId}/${path}`));
@@ -345,11 +340,7 @@
                     }
                 }
                 document.getElementById('totalSW').innerText = uniqueUIDs.size;
-
-            } catch(e) { 
-                console.error(e);
-                showToast(e.code === 'failed-precondition' ? "Missing Index." : "Load Error.");
-            }
+            } catch(e) { console.error(e); showToast(e.code === 'failed-precondition' ? "Missing Index." : "Load Error."); }
         };
 
         window.openChurchManager = () => {
@@ -384,7 +375,6 @@
                 const eventDateStr = document.getElementById('soulDateTime').value;
                 const dateId = eventDateStr.split('T')[0];
                 const monthId = dateId.substring(0, 7);
-
                 await addDoc(collection(db, "salvations"), {
                     count: Number(document.getElementById('soulCount').value),
                     note: document.getElementById('soulNote').value,
@@ -394,10 +384,8 @@
                     churchId: churchId,
                     timestamp: serverTimestamp()
                 });
-
                 await setDoc(doc(db, `churches/${churchId}/daily_stats`, dateId), { members: arrayUnion(uid) }, { merge: true });
                 await setDoc(doc(db, `churches/${churchId}/monthly_stats`, monthId), { members: arrayUnion(uid) }, { merge: true });
-
                 closeModal(); showToast("Record Saved."); loadStats();
             } catch(e) { showToast("Error saving record"); } finally { btn.innerText = "Submit"; btn.disabled = false; }
         };
