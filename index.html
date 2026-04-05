@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        /* Prevents layout jump during auto-redirects */
         [id="auth-title"] { min-height: 2.25rem; }
+        .role-option:checked + label { @apply bg-indigo-600 text-white shadow-md; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center min-h-screen p-6 transition-colors duration-300">
@@ -29,10 +29,22 @@
 
         <div class="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border dark:border-slate-800 shadow-xl text-left">
             <div class="space-y-4">
+                <div id="role-selector-container" class="hidden mb-6">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-2 block text-center">I am a...</label>
+                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl gap-1">
+                        <input type="radio" name="role" id="role-member" value="member" class="hidden" checked>
+                        <label for="role-member" class="flex-1 py-2 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white">Member</label>
+                        
+                        <input type="radio" name="role" id="role-pastor" value="pastor" class="hidden">
+                        <label for="role-pastor" class="flex-1 py-2 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white">Pastor</label>
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-1 block">Email</label>
                     <input id="email" type="email" placeholder="pastor@church.com" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl outline-none text-sm dark:text-white focus:border-indigo-500 transition-all">
                 </div>
+
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-1 block">Password</label>
                     <input id="password" type="password" placeholder="••••••••" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl outline-none text-sm dark:text-white focus:border-indigo-500 transition-all">
@@ -40,6 +52,11 @@
                     <div id="forgot-password-container" class="text-right pr-4 mt-2">
                         <button onclick="forgotPassword()" class="text-[10px] font-bold text-slate-400 hover:text-indigo-600 uppercase transition-all">Forgot Password?</button>
                     </div>
+                </div>
+
+                <div id="invite-container" class="hidden">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-1 block">Invite Code</label>
+                    <input id="inviteCode" type="text" placeholder="ENTER CODE" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl outline-none text-sm font-mono font-bold dark:text-indigo-400 focus:border-indigo-500 transition-all uppercase">
                 </div>
                 
                 <button id="auth-btn" onclick="handleAuth()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-2">
@@ -61,11 +78,10 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let isSignUp = false;
 
-        // Dynamic Toast Function
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
             t.innerText = msg;
@@ -76,29 +92,20 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const docSnap = await getDoc(doc(db, "profiles", user.uid));
-                
                 if (!docSnap.exists()) {
                     window.location.replace("onboarding.html");
                 } else {
                     const userData = docSnap.data();
-                    
-                    // BOUNCER LOGIC
                     if (userData.status === 'inactive') {
-                        showToast("Account deactivated. Contact your pastor.");
-                        try {
-                            await signOut(auth);
-                            sessionStorage.clear();
-                            // Delay reload slightly to let them read the toast
-                            setTimeout(() => window.location.reload(), 2000);
-                        } catch (e) { console.error("Logout failed", e); }
+                        showToast("Account deactivated.");
+                        await signOut(auth);
+                        setTimeout(() => window.location.reload(), 2000);
                         return;
                     }
-
                     const role = userData.role;
                     if (role === 'pastor') window.location.replace("pastor.html");
                     else if (role === 'superadmin') window.location.replace("admin.html");
                     else if (role === 'member') window.location.replace("member.html");
-                    else window.location.replace("onboarding.html");
                 }
             }
         });
@@ -114,19 +121,62 @@
             document.getElementById('switch-text').innerText = isSignUp ? "Already have an account?" : "Don't have an account?";
             document.getElementById('switch-btn').innerText = isSignUp ? "Sign In" : "Create One";
             document.getElementById('forgot-password-container').classList.toggle('hidden', isSignUp);
+            
+            // Toggle Signup Fields
+            document.getElementById('role-selector-container').classList.toggle('hidden', !isSignUp);
+            document.getElementById('invite-container').classList.toggle('hidden', !isSignUp);
         };
 
         window.handleAuth = async () => {
-            const e = document.getElementById('email').value, p = document.getElementById('password').value;
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
             const btn = document.getElementById('auth-btn');
-            if(!e || !p) return showToast("Fields required.");
+            
+            if(!email || !password) return showToast("Fields required.");
             
             btn.innerText = "Processing..."; btn.disabled = true;
+
             try {
-                if (isSignUp) await createUserWithEmailAndPassword(auth, e, p);
-                else await signInWithEmailAndPassword(auth, e, p);
+                if (isSignUp) {
+                    const inviteCode = document.getElementById('inviteCode').value.toUpperCase().trim();
+                    const role = document.querySelector('input[name="role"]:checked').value;
+                    
+                    if(!inviteCode) {
+                        btn.innerText = "Continue"; btn.disabled = false;
+                        return showToast("Invite code required.");
+                    }
+
+                    // 1. GATEKEEPER: Verify code in Firestore first
+                    const codeCollection = role === 'pastor' ? 'pastor_invites' : 'churches';
+                    const codeSnap = await getDoc(doc(db, codeCollection, inviteCode));
+
+                    if (!codeSnap.exists()) {
+                        btn.innerText = "Continue"; btn.disabled = false;
+                        return showToast("Invalid code. Access denied.");
+                    }
+
+                    // 2. CREATE AUTH
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // 3. CREATE PROFILE (Prevents Orphan Accounts)
+                    await setDoc(doc(db, "profiles", user.uid), {
+                        displayName: email.split('@')[0],
+                        email: email,
+                        role: role,
+                        status: 'active',
+                        churchId: [inviteCode], // Instantly associated
+                        createdAt: serverTimestamp()
+                    });
+
+                    showToast("Account created!");
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
             } catch (err) {
-                showToast(err.message);
+                console.error(err);
+                if (err.code === 'auth/email-already-in-use') showToast("Email already exists.");
+                else showToast(err.message);
                 btn.innerText = "Continue"; btn.disabled = false;
             }
         };
@@ -136,11 +186,11 @@
             if (!email) return showToast("Enter your email first.");
             try {
                 await sendPasswordResetEmail(auth, email);
-                showToast("Reset link sent to your email.");
+                showToast("Reset link sent.");
             } catch (err) { showToast(err.message); }
         };
 
-        if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); }
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
     </script>
 </body>
 </html>
