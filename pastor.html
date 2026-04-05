@@ -85,15 +85,22 @@
             </div>
         </header>
 
-        <div id="stats-container" class="hidden">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-20">
-                <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Salvations</p>
-                    <span id="totalSouls" class="text-5xl font-bold text-indigo-600">0</span>
-                </div>
-                <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border dark:border-slate-800 shadow-sm text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Participating Members</p>
-                    <span id="totalSW" class="text-5xl font-bold text-indigo-600">0</span>
+        <div id="stats-container" class="hidden mt-10">
+            <div class="mb-6">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">Report Data for</label>
+                <h3 id="reportDateLabel" class="text-indigo-500 font-bold text-sm uppercase tracking-wider">...</h3>
+            </div>
+
+            <div class="p-10 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[3rem] shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div class="text-center py-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Total Salvations</p>
+                        <span id="totalSouls" class="text-6xl font-black text-indigo-600 drop-shadow-sm">0</span>
+                    </div>
+                    <div class="text-center py-4 border-t sm:border-t-0 sm:border-l dark:border-slate-800">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Participating Members</p>
+                        <span id="totalSW" class="text-6xl font-black text-indigo-600 drop-shadow-sm">0</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -161,23 +168,24 @@
         window.setActivePreset = (p) => {
             currentPreset = p;
             
-            // Clear custom inputs and their highlights
+            // Clear custom inputs
             const dateInput = document.getElementById('customDate');
             const monthInput = document.getElementById('customMonth');
             dateInput.value = "";
             monthInput.value = "";
+
+            // Remove highlights from custom inputs
             [dateInput, monthInput].forEach(input => {
                 input.classList.remove('border-indigo-500', 'ring-2', 'ring-indigo-500/20', 'shadow-lg', 'shadow-indigo-500/20');
                 input.classList.add('border-slate-700');
             });
 
-            // Reset all preset buttons to "unselected" look
+            // Reset all preset buttons look
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/50', 'border-indigo-400');
                 btn.classList.add('bg-slate-100', 'dark:bg-slate-800/50', 'text-slate-500', 'dark:text-slate-400', 'border-transparent');
             });
 
-            // Apply "Selected" style to button
             const activeBtn = document.getElementById(`btn-${p}`);
             if (activeBtn) {
                 activeBtn.classList.remove('bg-slate-100', 'dark:bg-slate-800/50', 'text-slate-500', 'dark:text-slate-400', 'border-transparent');
@@ -190,17 +198,16 @@
             const dateInput = document.getElementById('customDate');
             const monthInput = document.getElementById('customMonth');
 
-            // 1. Reset all preset buttons to "off"
+            // Reset preset buttons UI
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-500/50', 'border-indigo-400');
                 btn.classList.add('bg-slate-100', 'dark:bg-slate-800/50', 'text-slate-500', 'dark:text-slate-400', 'border-transparent');
             });
 
-            // 2. Exclusive Logic
             if (type === 'date') monthInput.value = "";
             else dateInput.value = "";
 
-            // 3. Dynamic Highlight Toggling
+            // Toggle highlights based on value
             [dateInput, monthInput].forEach(input => {
                 if (input.value) {
                     input.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20', 'shadow-lg', 'shadow-indigo-500/20');
@@ -219,10 +226,7 @@
                 if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
                 const data = snap.data();
 
-                if (data.role !== 'pastor') {
-                    window.location.replace("index.html");
-                    return;
-                }
+                if (data.role !== 'pastor') { window.location.replace("index.html"); return; }
 
                 userProfile = data;
                 if (userProfile.status === 'inactive') {
@@ -268,10 +272,25 @@
             const selCh = document.getElementById('churchFilter').value;
             const cDate = document.getElementById('customDate').value;
             const cMonth = document.getElementById('customMonth').value;
+            const dateLabel = document.getElementById('reportDateLabel');
 
             document.getElementById('stats-container').classList.remove('hidden');
             document.getElementById('totalSouls').innerText = "...";
             document.getElementById('totalSW').innerText = "...";
+
+            // Dynamic Label Logic
+            if (cDate) {
+                dateLabel.innerText = new Date(cDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            } else if (cMonth) {
+                const [year, month] = cMonth.split('-');
+                dateLabel.innerText = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            } else if (currentPreset === 'today') {
+                dateLabel.innerText = "Today";
+            } else if (currentPreset === 'week') {
+                dateLabel.innerText = "This Week";
+            } else if (currentPreset === 'month') {
+                dateLabel.innerText = "This Month";
+            }
 
             try {
                 let soulQuery;
