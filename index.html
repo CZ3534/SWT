@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
+        /* Prevents layout jump during auto-redirects */
         [id="auth-title"] { min-height: 2.25rem; }
-        .role-option:checked + label { @apply bg-indigo-600 text-white shadow-md; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center min-h-screen p-6 transition-colors duration-300">
@@ -31,12 +31,20 @@
             <div class="space-y-4">
                 <div id="role-selector-container" class="hidden mb-6">
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-4 mb-2 block text-center">I am a...</label>
-                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl gap-1">
-                        <input type="radio" name="role" id="role-member" value="member" class="hidden" checked>
-                        <label for="role-member" class="flex-1 py-2 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white">Member</label>
+                    <div class="flex bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl gap-1">
+                        <div class="flex-1">
+                            <input type="radio" name="role" id="role-member" value="member" class="hidden peer" checked>
+                            <label for="role-member" class="block w-full py-2.5 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all duration-200 text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/20">
+                                Member
+                            </label>
+                        </div>
                         
-                        <input type="radio" name="role" id="role-pastor" value="pastor" class="hidden">
-                        <label for="role-pastor" class="flex-1 py-2 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white">Pastor</label>
+                        <div class="flex-1">
+                            <input type="radio" name="role" id="role-pastor" value="pastor" class="hidden peer">
+                            <label for="role-pastor" class="block w-full py-2.5 text-[10px] font-bold uppercase rounded-xl text-center cursor-pointer transition-all duration-200 text-slate-500 dark:text-slate-400 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/20">
+                                Pastor
+                            </label>
+                        </div>
                     </div>
                 </div>
 
