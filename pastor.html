@@ -60,7 +60,7 @@
                             <label class="block text-[9px] font-bold text-slate-400 uppercase mb-3 ml-2 text-left tracking-widest">Quick Presets</label>
                             <div class="flex gap-2">
                                 <button id="btn-today" onclick="setActivePreset('today')" class="preset-btn flex-1 py-3 bg-slate-100 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 shadow-sm text-slate-500 dark:text-slate-400">Today</button>
-                                <button id="btn-week" onclick="setActivePreset('week')" class="preset-btn flex-1 py-3 bg-slate-100 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 shadow-sm text-slate-500 dark:text-slate-400">Last Week</button>
+                                <button id="btn-week" onclick="setActivePreset('week')" class="preset-btn flex-1 py-3 bg-slate-100 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 shadow-sm text-slate-500 dark:text-slate-400">Week</button>
                                 <button id="btn-month" onclick="setActivePreset('month')" class="preset-btn flex-1 py-3 bg-slate-100 dark:bg-slate-800/50 border border-transparent rounded-2xl text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 shadow-sm text-slate-500 dark:text-slate-400">Month</button>
                             </div>
                         </div>
@@ -232,6 +232,7 @@
             if(!filter || !tagContainer) return;
             filter.innerHTML = '<option value="all">All My Churches</option>';
             churchNames = {};
+            let tagsHtml = "";
             for(const code of (userProfile.churchId || [])) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) {
@@ -241,6 +242,7 @@
                     filter.innerHTML += `<option value="${code}">${name}</option>`;
                 }
             }
+            tagContainer.innerHTML = tagsHtml;
         }
 
         window.loadStats = async () => {
@@ -262,7 +264,6 @@
             let soulQuery;
             let bucketPaths = [];
 
-            // --- Precise Date Range & Labeling Logic ---
             const options = { month: 'long', day: 'numeric', year: 'numeric' };
 
             if (cDate) {
@@ -290,7 +291,7 @@
             else if (currentPreset === 'week') {
                 const dayOfWeek = now.getDay();
                 let startOfWeek = new Date(now);
-                // SUNDAY SHIFT: If today is Sunday, show the PREVIOUS full week (Sun-Sat)
+                // SUNDAY SHIFT Logic
                 if (dayOfWeek === 0) startOfWeek.setDate(now.getDate() - 7);
                 else startOfWeek.setDate(now.getDate() - dayOfWeek);
 
