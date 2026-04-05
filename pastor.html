@@ -30,10 +30,24 @@
 
     <main class="max-w-4xl mx-auto p-6 pb-32 text-center">
         <header class="mb-10">
-            <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-[10px]">PASTOR</div>
+            <div id="role-display" class="badge-base badge-role mb-2 uppercase tracking-widest font-bold">PASTOR</div>
             <h2 id="user-display-name" class="text-4xl font-extrabold tracking-tight mb-3">...</h2>
             <div id="church-list-tags" class="flex flex-wrap justify-center gap-2 mt-2"></div>
             
+            <div class="mt-10 max-w-sm mx-auto">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Tools</label>
+                <div class="p-4 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm flex flex-col gap-3">
+                    <button id="manage-churches-btn" onclick="openChurchManager()" class="w-full text-[10px] font-bold bg-indigo-600 text-white px-6 py-4 rounded-2xl uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        Manage Churches & Codes
+                    </button>
+                    <button onclick="window.location.href='members.html'" class="w-full text-[10px] font-bold bg-indigo-600 text-white px-6 py-4 rounded-2xl uppercase active:scale-95 transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" /></svg>
+                        Member Management
+                    </button>
+                </div>
+            </div>
+
             <div class="mt-10 max-w-sm mx-auto">
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest text-center">Reports</label>
                 <div class="p-6 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-[2.5rem] shadow-sm">
@@ -85,6 +99,33 @@
         </div>
     </main>
 
+    <button onclick="openModal()" class="fab-button bg-indigo-600/90 backdrop-blur-sm shadow-xl active:scale-90 transition-transform">+</button>
+
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-[60]">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 border text-center shadow-2xl">
+            <h3 class="text-xl font-bold mb-8 dark:text-white">Log Salvation</h3>
+            <div class="flex items-center justify-between mb-6 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-3xl">
+                <button onclick="decrement()" class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-700 font-bold text-xl hover:bg-slate-100 transition-all">-</button>
+                <input id="soulCount" type="number" value="1" readonly class="w-20 text-center text-5xl font-light bg-transparent text-indigo-600">
+                <button onclick="increment()" class="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold text-xl hover:bg-indigo-700 transition-all">+</button>
+            </div>
+            <input id="soulDateTime" type="datetime-local" class="w-full p-4 bg-slate-50 border rounded-2xl text-sm mb-4 outline-none dark:bg-slate-800 dark:text-white">
+            <input id="soulNote" type="text" placeholder="Names/Location..." class="w-full p-4 bg-slate-50 border rounded-2xl text-sm mb-8 outline-none dark:bg-slate-800 dark:text-white">
+            <div class="flex gap-3"><button onclick="closeModal()" class="flex-1 py-4 text-slate-400 font-bold">Cancel</button><button id="submit-btn" onclick="handleDataSubmit()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold">Submit</button></div>
+        </div>
+    </div>
+
+    <div id="church-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 hidden z-50">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-8 border shadow-2xl">
+            <h3 class="text-xl font-bold mb-6 text-center dark:text-white">Church Management</h3>
+            <div id="church-list" class="space-y-1 mb-6 max-h-72 overflow-y-auto pr-2 custom-scroll text-left"></div>
+            <div class="border-t pt-6">
+                <input id="newChurchName" type="text" placeholder="Church Name" class="w-full p-4 mb-4 bg-slate-50 border rounded-2xl outline-none dark:bg-slate-800 dark:text-white">
+                <div class="flex gap-3"><button onclick="closeChurchManager()" class="flex-1 py-4 text-slate-400">Close</button><button id="add-btn" onclick="addNewChurch()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold">Add Code</button></div>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
 
     <script type="module">
@@ -93,16 +134,24 @@
         import { doc, getDoc, getDocs, collection, query, where, orderBy, setDoc, updateDoc, arrayUnion, addDoc, serverTimestamp, getAggregateFromServer, sum } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let userProfile = null; 
+        let churchNames = {};
         let currentPreset = 'month';
+
+        const initTheme = () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.getElementById('main-html').classList.add('dark');
+            }
+        };
+        initTheme();
 
         window.showToast = (msg) => {
             const t = document.getElementById('toast');
+            if(!t) return;
             t.innerText = msg;
             t.classList.remove('opacity-0', 'translate-y-10');
             setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
         };
 
-        // UI HELPERS
         window.setActivePreset = (p) => {
             currentPreset = p;
             document.getElementById('customDate').value = "";
@@ -111,31 +160,39 @@
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-500/40', 'shadow-lg', 'border-indigo-600');
             });
             const activeBtn = document.getElementById(`btn-${p}`);
-            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-500/40', 'shadow-lg', 'border-indigo-600');
+            if(activeBtn) {
+                activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-500/40', 'shadow-lg', 'border-indigo-600');
+            }
         };
 
         window.handleCustomInput = (type) => {
             currentPreset = null;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-500/40', 'shadow-lg', 'border-indigo-600'));
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-500/40', 'shadow-lg', 'border-indigo-600');
+            });
             if (type === 'date') document.getElementById('customMonth').value = "";
             else document.getElementById('customDate').value = "";
         };
 
-        // SECURE BOUNCER
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.replace("index.html"); return; }
+            if (!user) { sessionStorage.clear(); window.location.replace("index.html"); return; }
             try {
                 const snap = await getDoc(doc(db, "profiles", user.uid));
                 if (!snap.exists()) { window.location.replace("onboarding.html"); return; }
                 const data = snap.data();
 
-                // STABLE REDIRECT logic
                 if (data.role !== 'pastor') {
                     window.location.replace("index.html");
                     return;
                 }
 
                 userProfile = data;
+                if (userProfile.status === 'inactive') {
+                    await signOut(auth);
+                    window.location.replace("index.html");
+                    return;
+                }
+
                 document.getElementById('user-display-name').innerText = userProfile.displayName;
                 await refreshUI();
                 setActivePreset('month');
@@ -147,13 +204,17 @@
         async function refreshUI() {
             const filter = document.getElementById('churchFilter');
             const tagContainer = document.getElementById('church-list-tags');
+            if(!filter || !tagContainer) return;
+            
             filter.innerHTML = '<option value="all">All My Churches</option>';
+            churchNames = {};
             let tagsHtml = "";
 
             for(const code of (userProfile.churchId || [])) {
                 const d = await getDoc(doc(db, "churches", code));
                 if(d.exists()) {
                     const name = d.data().name;
+                    churchNames[code] = name;
                     tagsHtml += `<span class="badge-base badge-church bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase">${name}</span>`;
                     filter.innerHTML += `<option value="${code}">${name}</option>`;
                 }
@@ -213,7 +274,7 @@
                 if (!totalValue) {
                     document.getElementById('totalSouls').innerText = "0";
                     document.getElementById('totalSW').innerText = "0";
-                    showToast("No data for this range.");
+                    showToast("No data found.");
                     return;
                 }
                 document.getElementById('totalSouls').innerText = totalValue;
@@ -234,8 +295,76 @@
             }
         };
 
+        window.openChurchManager = () => {
+            const list = document.getElementById('church-list'); 
+            if(!list) return;
+            list.innerHTML = "";
+            userProfile.churchId.forEach(async c => {
+                const name = churchNames[c] || 'Church';
+                list.innerHTML += `<div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl flex justify-between items-center border dark:border-slate-700 mb-2 text-left"><div><p class="text-[9px] font-bold text-emerald-500 uppercase">${name}</p><p class="text-base font-mono font-bold dark:text-white">${c}</p></div><button onclick="navigator.clipboard.writeText('${c}'); showToast('Copied!');" class="text-xs font-bold text-slate-400 hover:text-indigo-500">Copy</button></div>`;
+            });
+            document.getElementById('church-modal').classList.remove('hidden');
+        };
+
+        window.addNewChurch = async () => {
+            const n = document.getElementById('newChurchName').value; if(!n) return;
+            const c = Math.random().toString(36).substring(2, 8).toUpperCase();
+            try {
+                await setDoc(doc(db, "churches", c), { name: n, pastorId: auth.currentUser.uid });
+                await updateDoc(doc(db, "profiles", auth.currentUser.uid), { churchId: arrayUnion(c) });
+                userProfile.churchId.push(c);
+                document.getElementById('newChurchName').value = "";
+                await refreshUI(); 
+                openChurchManager(); 
+                showToast("Church Code Added");
+            } catch(e) { showToast("Error adding church"); }
+        };
+
+        window.handleDataSubmit = async () => {
+            const btn = document.getElementById('submit-btn'); 
+            btn.innerText = "Saving..."; btn.disabled = true;
+            try {
+                const uid = auth.currentUser.uid;
+                const churchId = userProfile.churchId[0]; // Primary church
+                const eventDateStr = document.getElementById('soulDateTime').value;
+                const dateId = eventDateStr.split('T')[0];
+                const monthId = dateId.substring(0, 7);
+
+                await addDoc(collection(db, "salvations"), {
+                    count: Number(document.getElementById('soulCount').value),
+                    note: document.getElementById('soulNote').value,
+                    eventDate: eventDateStr,
+                    userId: uid,
+                    userEmail: auth.currentUser.email,
+                    churchId: churchId,
+                    timestamp: serverTimestamp()
+                });
+
+                await setDoc(doc(db, `churches/${churchId}/daily_stats`, dateId), { members: arrayUnion(uid) }, { merge: true });
+                await setDoc(doc(db, `churches/${churchId}/monthly_stats`, monthId), { members: arrayUnion(uid) }, { merge: true });
+
+                closeModal(); 
+                showToast("Record Saved."); 
+                loadStats();
+            } catch(e) { 
+                console.error(e);
+                showToast("Error saving record"); 
+            } finally { 
+                btn.innerText = "Submit"; btn.disabled = false; 
+            }
+        };
+
         window.handleLogout = () => signOut(auth).then(() => window.location.replace("index.html"));
         window.toggleDarkMode = () => document.getElementById('main-html').classList.toggle('dark');
+        window.closeChurchManager = () => document.getElementById('church-modal').classList.add('hidden');
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        window.openModal = () => { 
+            document.getElementById('modal').classList.remove('hidden'); 
+            document.getElementById('soulCount').value = 1; 
+            document.getElementById('soulDateTime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0, 16); 
+        };
+        window.increment = () => document.getElementById('soulCount').value++;
+        window.decrement = () => { if(document.getElementById('soulCount').value > 1) document.getElementById('soulCount').value--; };
     </script>
 </body>
 </html>
