@@ -59,10 +59,26 @@
         <p class="mt-8 text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">Soulwinning Baptist Church Ministry Tool</p>
     </div>
 
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-10 transition-all duration-500 z-[100] pointer-events-none text-sm font-bold"></div>
+
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const initTheme = () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.getElementById('main-html').classList.add('dark');
+            }
+        };
+        initTheme();
+
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => t.classList.add('opacity-0', 'translate-y-10'), 3000);
+        };
 
         onAuthStateChanged(auth, async (user) => { 
             if (!user) {
@@ -95,57 +111,98 @@
 
         window.savePastor = async () => {
             const code = document.getElementById('p-invite').value.toUpperCase().trim();
-            const name = document.getElementById('p-name').value;
-            const church = document.getElementById('p-church').value;
+            const name = document.getElementById('p-name').value.trim();
+            const church = document.getElementById('p-church').value.trim();
             const btn = document.getElementById('p-btn');
 
-            if(!code || !name || !church) return alert("All fields are required.");
+            if(!code || !name || !church) return showToast("All fields are required.");
 
             btn.innerText = "Saving..."; btn.disabled = true;
             try {
                 const inviteRef = doc(db, "pastor_invites", code);
                 const inviteSnap = await getDoc(inviteRef);
-                if (!inviteSnap.exists()) throw new Error("Invalid Invite Code.");
+                
+                if (!inviteSnap.exists()) {
+                    showToast("Invalid Invite Code.");
+                    throw new Error("Invalid Code");
+                }
 
                 const churchCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                await setDoc(doc(db, "churches", churchCode), { name: church, pastorId: auth.currentUser.uid });
-                await setDoc(doc(db, "profiles", auth.currentUser.uid), { 
+                const uid = auth.currentUser.uid;
+
+                // 1. Create the Church document
+                await setDoc(doc(db, "churches", churchCode), { 
+                    name: church, 
+                    pastorId: uid,
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Create the Profile document
+                await setDoc(doc(db, "profiles", uid), { 
                     displayName: name, 
                     role: 'pastor', 
                     churchId: [churchCode], 
                     email: auth.currentUser.email,
-                    status: 'active', // NEW
-                    createdAt: new Date().toISOString()
+                    status: 'active',
+                    createdAt: serverTimestamp()
                 });
+
+                // 3. Consume the invite code
                 await deleteDoc(inviteRef);
-                window.location.replace("pastor.html");
-            } catch (e) { alert(e.message); btn.innerText = "Complete"; btn.disabled = false; }
+                
+                showToast("Setup Complete! Redirecting...");
+                setTimeout(() => window.location.replace("pastor.html"), 1500);
+
+            } catch (e) {
+                console.error(e);
+                if (e.code === 'permission-denied') {
+                    showToast("Permission Denied: Update Firestore Rules.");
+                } else {
+                    showToast(e.message || "Setup failed.");
+                }
+                btn.innerText = "Complete"; 
+                btn.disabled = false;
+            }
         };
 
         window.saveMember = async () => {
-            const name = document.getElementById('m-name').value;
+            const name = document.getElementById('m-name').value.trim();
             const code = document.getElementById('m-church-code').value.toUpperCase().trim();
             const btn = document.getElementById('m-btn');
 
-            if(!name || !code) return alert("All fields are required.");
+            if(!name || !code) return showToast("All fields are required.");
 
             btn.innerText = "Saving..."; btn.disabled = true;
             try {
                 const churchSnap = await getDoc(doc(db, "churches", code));
-                if (!churchSnap.exists()) throw new Error("Invalid Church Code.");
+                if (!churchSnap.exists()) {
+                    showToast("Invalid Church Code.");
+                    throw new Error("Invalid Church");
+                }
+
                 await setDoc(doc(db, "profiles", auth.currentUser.uid), { 
                     displayName: name, 
                     role: 'member', 
                     churchId: [code], 
                     email: auth.currentUser.email,
-                    status: 'active', // NEW
-                    createdAt: new Date().toISOString() 
+                    status: 'active',
+                    createdAt: serverTimestamp()
                 });
-                window.location.replace("member.html");
-            } catch (e) { alert(e.message); btn.innerText = "Complete"; btn.disabled = false; }
-        };
 
-        if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); }
+                showToast("Welcome to the team!");
+                setTimeout(() => window.location.replace("member.html"), 1500);
+
+            } catch (e) {
+                console.error(e);
+                if (e.code === 'permission-denied') {
+                    showToast("Permission Denied: Update Firestore Rules.");
+                } else {
+                    showToast(e.message || "Setup failed.");
+                }
+                btn.innerText = "Complete"; 
+                btn.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>
